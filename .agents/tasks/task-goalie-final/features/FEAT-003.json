@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-003",
+  "type": "docs",
+  "description": "STEP C — Phase 9: submission README + handoff docs. Write FILES ONLY — produce NO video or audio. Rewrite README.md (does not exist yet) as the full submission README containing the four-section technical write-up + standard README content + an exact, honest known-limitations section. Create docs/demo-script.md (a precise 3-minute script the USER films), docs/known-blockers.md, and docs/submission-checklist-status.md. Depends on FEAT-002 (README links docs/kiro-dev-log.md and references the .kiro artifacts). Honesty: the demo script must NOT instruct claiming real on-device blocking was demonstrated; sample data must be labeled; MCP stated as not used; video filming + remote/push + YouTube upload are user actions (this workflow is local-only).",
+  "status": "pending",
+  "steps": [
+    "Read .agents/tasks/task-goalie-final/context.json and .agents/tasks/plan-final.md FIRST. Skim docs/ios-focus-setup.md, docs/ai-coaching.md, and docs/kiro-dev-log.md (from FEAT-002) so links and claims are accurate.",
+    "Create README.md with the four-section TECHNICAL WRITE-UP: (1) Project Overview — problem statement, target users, solution summary, key features; (2) Design Decisions — technology choices, alternatives considered, trade-offs (cost vs performance, simplicity vs features), security + scalability; (3) Kiro Usage — honest spec-driven vs vibe coding, steering docs, the agent hook, and an honest MCP statement (MCP was not used); (4) Learning Journey & Forward Thinking — biggest challenges + how overcome, what you'd do differently, future enhancements/scaling.",
+    "In README.md also add standard content: setup/run (Expo SDK 54 custom dev build; `npm install`, `npm run typecheck`, `npm run lint`, `npm test`, `node scripts/validate-catalog.mjs`; native via `npx expo prebuild` + `npm run ios`), architecture overview (domain/persistence/ui/focus split + native module + DeviceActivityMonitor extension + isolated AI server stub), privacy (AI off-by-default server-side-only; no PII leaves device by default), supported platforms, and test results (14 suites / 167 tests — use FEAT-001's recorded numbers).",
+    "Add an EXACT known-limitations section to README.md: real iPhone app-blocking is implemented as native Screen Time code but is NOT runtime-verified — it needs a PAID Apple Developer account with the com.apple.developer.family-controls entitlement + a physical iPhone, and the iOS simulator cannot run it. Link docs/ios-focus-setup.md, docs/ai-coaching.md, and docs/kiro-dev-log.md (relative links).",
+    "Create docs/demo-script.md: a precise 3-minute demo script the USER films (do NOT produce media). Sections: 0:00-0:30 PROBLEM; 0:30-2:30 LIVE DEMO of one complete learning journey (pick track -> lesson -> practice -> mastery pass -> certificate) + the honest Focus settings screen shown in its 'unavailable' state with explanation; 2:30-3:00 IMPACT. Include word-for-word voiceover + an exact tap-sequence SHOT LIST with timings. Recording setup: iPhone 16 iOS simulator + QuickTime. Any seeded/demo progress or sample certificate MUST be explicitly labeled as sample data. The script MUST NOT instruct the user to claim real on-device blocking was demonstrated.",
+    "Create docs/known-blockers.md: honest remaining blockers — paid Apple account + family-controls entitlement + physical device required for Screen Time runtime verification; the 3-min video must be filmed by the user; adding a git remote / pushing / YouTube (or Vimeo/Facebook) upload are user actions; MCP not used.",
+    "Create docs/submission-checklist-status.md: map each hackathon requirement to done / user-action-needed — GitHub repo + README with setup/run; .kiro/ present at root and NOT gitignored (done, confirm via git ls-files .kiro); technical documentation + architecture decisions; technical write-up four sections (done in README); 3-min demo video (user-action: film + upload public/unlisted); optional AWS Builder Center blog (optional). Explicitly flag that the video must be filmed by the user and that remote/push + video upload are user actions because this workflow is local-only.",
+    "Verify all relative links resolve: `ls docs/ios-focus-setup.md docs/ai-coaching.md docs/kiro-dev-log.md`.",
+    "Commit: `git add README.md docs/demo-script.md docs/known-blockers.md docs/submission-checklist-status.md && git commit -m 'docs: add submission README with technical write-up and demo/handoff docs (Phase 9)'` and confirm `git status` is clean."
+  ],
+  "acceptance_criteria": [
+    "README.md exists at repo root and contains all four technical-write-up sections (Project Overview; Design Decisions with alternatives/trade-offs/security+scalability; Kiro Usage with honest MCP statement; Learning Journey & Forward Thinking) PLUS setup/run, architecture, privacy, supported platforms, and test results.",
+    "README.md has an exact, honest known-limitations section stating on-device blocking is native code that is NOT runtime-verified (needs paid Apple account + family-controls entitlement + physical iPhone; simulator can't run it), and links docs/ios-focus-setup.md, docs/ai-coaching.md, docs/kiro-dev-log.md.",
+    "docs/demo-script.md has the three timed sections (0:00-0:30, 0:30-2:30, 2:30-3:00) with word-for-word voiceover + tap-sequence shot list, labels sample data, and never instructs claiming real on-device blocking was demonstrated.",
+    "docs/known-blockers.md and docs/submission-checklist-status.md exist, are honest, and flag the video + remote/push/upload as user actions.",
+    "All README relative links resolve to real files; `git status` is clean after commit."
+  ],
+  "verification": [
+    "Run `ls README.md docs/demo-script.md docs/known-blockers.md docs/submission-checklist-status.md docs/ios-focus-setup.md docs/ai-coaching.md docs/kiro-dev-log.md` and confirm all exist.",
+    "Grep README.md for the four write-up section headings and the known-limitations section and confirm each is present.",
+    "Read docs/demo-script.md and confirm no instruction claims real on-device blocking was demonstrated and sample data is labeled.",
+    "Run `git status` and confirm a clean tree after the commit."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

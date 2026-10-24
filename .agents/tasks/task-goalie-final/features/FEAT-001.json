@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "STEP A — Clean reconciliation of the working tree and the full verification sweep, recorded VERBATIM to .agents/tasks/verification-final.md. The only uncommitted changes are .agents/tasks/ planning/tracking artifacts from the concurrent Phase 2-7 builds (2 modified: design-fix-review.md, design-phase34.md; 11 untracked incl. design/plan/review/task docs and task-goalie-phase2/*) — these are real work and belong in the repo; no app source is dangling. After committing them, run the full sweep from a clean install including the native COMPILE-ONLY sweep (expo prebuild + simulator xcodebuild). This feature is a prerequisite for FEAT-002 and FEAT-003. Honesty ceiling: the native build is compile-only; runtime Screen Time blocking is NOT verifiable here and must never be claimed.",
+  "status": "pending",
+  "steps": [
+    "Read .agents/tasks/plan-final.md and .agents/tasks/task-goalie-final/context.json FIRST.",
+    "Run `git status` and skim `git diff .agents/tasks` to confirm the pending changes are planning/tracking artifacts (not app source). Stage the .agents/tasks changes and commit them in one logical chunk, e.g. `git add .agents/tasks && git commit -m 'chore: record Phase 2-7 planning, review, and task-tracking artifacts'`. Do NOT lose real work; do NOT commit node_modules, ios/, android/, or .expo (they are gitignored).",
+    "Create /Users/Shared/goalie/.agents/tasks/verification-final.md and record each command below VERBATIM with its exit code.",
+    "Clean install: `rm -rf node_modules && npm install`. After it completes, run `git status --porcelain package-lock.json` and confirm it is empty (lockfile consistent). Record the npm install tail and the clean lockfile check.",
+    "`npm run typecheck` — expect exit 0 (tsc --noEmit, no output). Record.",
+    "`npm run lint` — expect 0 errors; 4 benign @typescript-eslint/no-require-imports WARNINGS in test files are expected (they register the AsyncStorage jest mock). Record the full summary line.",
+    "`npm test` — record the 'Test Suites:' and 'Tests:' summary lines (baseline 14 suites / 167 tests). A benign console.warn 'goalie: dropped malformed completed level' during screens.smoke/accessibility is expected (exercises the store fail-safe).",
+    "`node scripts/validate-catalog.mjs` — expect '3 tracks, 9 levels, 18 lessons, 45 mastery questions'. Record.",
+    "Native compile sweep: `npx expo prebuild --platform ios --clean`. Then derive the scheme: `xcodebuild -workspace ios/*.xcworkspace -list` (read the scheme name), then `xcodebuild -workspace ios/<name>.xcworkspace -scheme <scheme> -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build`. Confirm `** BUILD SUCCEEDED **` with the goalie-focus module + DeviceActivityMonitor extension + new pods (expo-print/expo-sharing/expo-file-system) compiling. Record the prebuild output and the final xcodebuild result line.",
+    "If `expo prebuild` or `xcodebuild` cannot run (missing Xcode/CocoaPods/toolchain) or fails for environment reasons, record the EXACT failure output and an honest note that the native ceiling here is compile-only and runtime shielding is unverifiable — do NOT claim BUILD SUCCEEDED that was not observed. If a GREEN result would otherwise have to be fabricated to proceed, call send_message severity 'warning' describing the situation and wait.",
+    "Fix any genuinely red JS result (typecheck/lint/test/catalog) within scope before finishing; re-run and re-record. Do NOT fake a pass. Do NOT commit the gitignored ios/ directory.",
+    "Commit verification-final.md: `git add .agents/tasks/verification-final.md && git commit -m 'chore: record Phase 8-9 batch full verification sweep (STEP A)'`."
+  ],
+  "acceptance_criteria": [
+    "`git status` shows a clean working tree after the planning-artifacts commit (only gitignored paths remain untracked).",
+    "`.agents/tasks/verification-final.md` exists and contains verbatim output + exit codes for: npm install + lockfile-consistency check, npm run typecheck, npm run lint, npm test (with suite/test counts), node scripts/validate-catalog.mjs, and the native expo prebuild + xcodebuild sweep (either `** BUILD SUCCEEDED **` or an honest recorded failure with the compile-only ceiling note).",
+    "typecheck exits 0; lint reports 0 errors; npm test reports all suites/tests passing (>= 14 suites / 167 tests); catalog validator reports 3 tracks / 9 levels / 18 lessons / 45 mastery questions.",
+    "No fabricated results; the native result is recorded honestly; no gitignored build output (ios/, node_modules) committed."
+  ],
+  "verification": [
+    "Run `git status` and confirm clean tree.",
+    "Run `npm run typecheck && npm run lint && npm test && node scripts/validate-catalog.mjs` and confirm all green (counts match).",
+    "Open .agents/tasks/verification-final.md and confirm every command's verbatim output + exit code is present, including the native sweep result recorded honestly.",
+    "Run `git log --oneline -3` and confirm the planning-artifacts commit and the verification-final commit are present."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,7 @@
+{
+  "task_id": "task-goalie-final",
+  "task_description": "FINAL batch (Phases 8 + 9) for the Goalie Expo/React Native app at /Users/Shared/goalie (local-only git, branch main, NO remote/push). STEP A: reconcile the working tree (commit leftover .agents/tasks planning artifacts) and run the full verification sweep from a clean install, recording EXACT output to .agents/tasks/verification-final.md, including a native compile-only sweep (expo prebuild + simulator xcodebuild). STEP B (Phase 8): create a real, tracked .kiro/ directory at repo root (specs matching what was actually built, steering docs for conventions actually followed, at least one valid+useful hook), maintain an HONEST docs/kiro-dev-log.md, run the required-validation coverage check adding only targeted tests where thin, and scan for committed secrets/PII. STEP C (Phase 9): rewrite README.md as the full submission README with the four-section technical write-up + standard content + an exact honest known-limitations section, and create docs/demo-script.md, docs/known-blockers.md, docs/submission-checklist-status.md (write files only — NO video/audio). Honesty is paramount: never fake green results, never claim runtime on-device Screen Time blocking works (compile-only ceiling), never invent MCP usage, never retro-claim early planning files were Kiro-generated. .kiro MUST stay tracked and MUST NOT be gitignored.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

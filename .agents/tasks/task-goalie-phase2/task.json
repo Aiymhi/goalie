@@ -1,0 +1,7 @@
+{
+  "task_id": "task-goalie-phase2",
+  "task_description": "Implement Phase 2 of Goalie per the APPROVED design at /Users/Shared/goalie/.agents/tasks/design-phase2.md: enrich content/tracks.json (2 lessons + 5-question mastery x 9 levels, finance disclaimer) + content/CONTENT-REVIEW.md + tighten scripts/validate-catalog.mjs; implement the pure, tested assessment + progression + rewards(completion-events) + certificates(preview) domain and the enriched catalog types/parser; add local AsyncStorage persistence (pinned 2.2.0) with real data deletion; wire the full journey screen graph into real navigation with honest loading/empty/error states, the finance educational-only disclaimer, and the honest Phase 1 focus-availability verdict (never fake blocking). Order content-first, then domain+tests, then persistence, then screens. Required NEW domain tests: mastery grading incl. exactly-4 boundary pass and 3-correct fail, level-completion logic, progression non-regression on retry, and local-data deletion clearing state. Verify with npm run typecheck (strict), npm run lint, npm test (new domain tests, suite/test counts), node scripts/validate-catalog.mjs, and a JS build smoke (npx tsc + jest render smoke of key screens); no full iOS xcodebuild rerun since native is unchanged.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

@@ -1,0 +1,36 @@
+{
+  "id": "FEAT-002",
+  "type": "docs",
+  "description": "STEP B — Phase 8: Kiro evidence, coverage, and honesty. Create a real, git-tracked .kiro/ directory at the repo root (it does NOT exist yet): specs that match what was ACTUALLY built, steering docs for conventions ACTUALLY followed, and at least one valid+useful Kiro hook. Maintain an HONEST docs/kiro-dev-log.md. Run the required-validation coverage check and add ONLY targeted tests where coverage is genuinely thin. Scan for committed secrets/PII. Depends on FEAT-001 (clean, verified baseline). .kiro MUST stay tracked and MUST NOT be added to .gitignore (hackathon-critical). Honesty: specs/steering/log must reflect reality; do NOT invent MCP usage; do NOT retro-claim early planning files were Kiro-generated; never claim runtime on-device blocking works.",
+  "status": "pending",
+  "steps": [
+    "Read .agents/tasks/task-goalie-final/context.json and .agents/tasks/plan-final.md FIRST. Confirm .kiro/ does not yet exist and .gitignore has no 'kiro' entry (keep it that way).",
+    "Create .kiro/specs/learning-journey/{requirements.md,design.md,tasks.md} distilled from .agents/tasks/design-phase2.md + plan-phase2.md + the shipped code (src/domain/{assessment,rewards,progression,certificates,content}, src/persistence/store.ts with v1->v2 migration, src/ui screens). Trim to what SHIPPED; mark delivered tasks done. Cross-check every requirement against real src/ modules.",
+    "Create .kiro/specs/focus-session/{requirements.md,design.md,tasks.md} distilled from design-phase34/567 material + src/focus/* + modules/goalie-focus + docs/ios-focus-setup.md. State the voluntary-focus design AND the honest compile-only / unavailable states explicitly (never a fake blocked state).",
+    "Create .kiro/steering/conventions.md and .kiro/steering/honesty.md (or one consolidated .kiro/steering/goalie.md — pick one, state why in the dev log). Capture conventions ACTUALLY followed, each traceable to code: content-separate-from-logic (pure src/domain/* with no RN/AsyncStorage imports + injected Clock), honest states (ScreenState loading/empty/error + honest focus-unavailable), deterministic rewards (no fake XP/percentages; AI path can never grant score/XP/badge/certificate), single-key versioned persistence with structural guard + v1->v2 migration, and jest-expo testing conventions (AsyncStorage mock registration).",
+    "Create .kiro/hooks/validate-catalog-on-save.kiro.hook with JSON: {\"enabled\": true, \"name\": \"Validate course catalog on save\", \"description\": \"When content/tracks.json is saved, run the catalog structure validator and report pass/fail.\", \"version\": \"1\", \"when\": {\"type\": \"fileEdited\", \"patterns\": [\"content/tracks.json\"]}, \"then\": {\"type\": \"askAgent\", \"prompt\": \"Run `node scripts/validate-catalog.mjs` and report whether the Goalie course catalog is still structurally valid. If it fails, summarize the specific validation errors so they can be fixed.\"}}. Confirm it is valid JSON.",
+    "Create/maintain docs/kiro-dev-log.md: HONEST dated entries per feature/phase covering spec decisions, work via Kiro workflows/agents, human corrections, tests + ACTUAL results, and remaining limitations. Explicitly state MCP was NOT used. Explicitly state the early planning files were NOT Kiro-generated (do not retro-claim). Note the native runtime-unverified (compile-only) limitation. If the hook could not be exercised headlessly, say so rather than claiming observed runs.",
+    "Required-validation coverage check: confirm __tests__ cover assessment, rewards, progression, certificates (domain); persistence + v1->v2 migration; focus state + error handling; accessibility on the main journey; and that type checking + the iOS simulator compile are covered by FEAT-001's sweep. The 14 existing suites already cover these (assessment, rewards, progression, certificates, certificate-document, store, focus-session, focus-screen, availability, accessibility, coaching, aiCoaching, catalog, screens.smoke). Identify any genuinely thin spot (e.g. an explicit v1->v2 migration assertion in store.test.ts, or an explicit focus error-handling branch in focus-session/availability tests) and add ONLY targeted tests to close it. Do NOT pad coverage.",
+    "Secret / PII scan: grep the repo excluding node_modules/.git/ios/android for API-key patterns (sk-..., AKIA..., -----BEGIN PRIVATE KEY-----), .env files, and student PII. Confirm server/index.js carries NO real key (it reads process.env.AI_PROVIDER_API_KEY server-side only — leave as-is). Record the command + empty result in docs/kiro-dev-log.md or verification-final.md.",
+    "Run `npm run typecheck && npm run lint && npm test && node scripts/validate-catalog.mjs` and confirm still green (counts same or higher).",
+    "Commit in logical chunks: `git add .kiro docs/kiro-dev-log.md __tests__ && git commit -m 'feat: add .kiro specs/steering/hook, Kiro dev log, and coverage tests (Phase 8)'`. Confirm `git ls-files .kiro | head` is non-empty and `grep -n kiro .gitignore` finds nothing."
+  ],
+  "acceptance_criteria": [
+    ".kiro/ exists at repo root and is git-tracked: `git ls-files .kiro` lists specs (learning-journey + focus-session with requirements/design/tasks), steering doc(s), and the .kiro.hook file.",
+    ".gitignore contains NO 'kiro' entry (`grep -n kiro .gitignore` returns nothing).",
+    "The hook file is valid JSON and parses (node JSON.parse exits 0).",
+    "docs/kiro-dev-log.md exists with dated honest entries, explicitly states MCP was not used and the early planning files were not Kiro-generated, and records the native compile-only limitation.",
+    "The required-validation coverage areas are all present in __tests__; any added tests are targeted at a named real gap, not padding.",
+    "Secret/PII scan returns nothing committed; server/index.js has no real key.",
+    "`npm run typecheck && npm run lint && npm test && node scripts/validate-catalog.mjs` all green with test count >= 167."
+  ],
+  "verification": [
+    "Run `git ls-files .kiro | head` and confirm specs/steering/hook files are tracked.",
+    "Run `grep -n kiro .gitignore` and confirm no match.",
+    "Run `node -e \"JSON.parse(require('fs').readFileSync('.kiro/hooks/validate-catalog-on-save.kiro.hook','utf8')); console.log('hook JSON ok')\"` and confirm it prints ok.",
+    "Run `npm test` and confirm all suites/tests pass (>= 167).",
+    "Run the secret scan `grep -rnI --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=ios --exclude-dir=android -E '(sk-[a-zA-Z0-9]{20}|AKIA[0-9A-Z]{16}|BEGIN (RSA |EC )?PRIVATE KEY)' .` and confirm no committed secrets."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

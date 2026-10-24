@@ -1,126 +1,103 @@
-# Design Fix Re-Review — Goalie Phase 1
+# Design Fix Review — `design-phase34.md` (third-review-round fixes)
 
-Scope: focused re-review of the FIVE targeted fixes recorded in §12 of
-`/Users/Shared/goalie/.agents/tasks/design.md`. Already-approved parts of the
-design are not re-litigated. The design also contains a §13 that responds to a
-prior fix re-review (which had corrected the config-plugins version
-attribution); that correction is folded into fix 1 below and re-verified against
-the npm registry.
+Scope: verify ONLY that the 5 mandated fixes from the third review round were correctly applied and are internally consistent. The already-approved core design (idempotent ledger, local-day streak, badge-on-completeness, XP/mastery separation, v1→v2 migration, injected clock, improvement-honesty, AI-never-awards) is NOT re-litigated here.
 
-Verification was performed against live package sources (no local
-`node_modules`/`package.json` exist yet — this is still the design phase), by
-packing the exact pinned packages from npm and inspecting their type
-declarations and build output, plus `node` checks of the runtime claims.
+Method: read the revised design in full, then verify each fix claim against the actual repo source it touches (`screens.smoke.test.tsx`, `store.test.ts`, `ResultScreen.tsx`, `MasteryResultScreen.tsx`, `ProgressionProvider.tsx`, `RootNavigator.tsx`) rather than taking the doc's word for the starting state.
 
-## Fix-by-fix assessment
+---
 
-### Fix 1 — config-plugin extension-target mechanism (§5 item 3 / §5.1 / §7 / §12.1 / §13.1)
-Satisfied. The design routes extension-target creation through the
-`withXcodeProject` escape hatch driving raw `pbxproj` mutation via the `xcode`
-library, and enumerates the concrete mutations: app-extension `PBXNativeTarget`
-(`com.apple.product-type.app-extension`), a `PBXSourcesBuildPhase` compiling
-`GoalieMonitor.swift` + shared `GoalieFocusConstants.swift`, dedicated extension
-entitlements (Family Controls + App Groups), the extension `Info.plist`
-(`NSExtensionPointIdentifier = com.apple.deviceactivity.monitor-extension`),
-`IPHONEOS_DEPLOYMENT_TARGET = 16.0`, and a `PBXCopyFilesBuildPhase` with
-`dstSubfolderSpec = 13` ("Embed App Extensions") plus a `PBXTargetDependency` on
-the main app. `withEntitlementsPlist` is correctly kept separate for the main-app
-entitlements (§5 item 1).
+## Fix-by-fix verification
 
-Version attribution verified against the npm registry this pass:
-- `@expo/config-plugins` `sdk-54` dist-tag = `54.0.6` (confirmed).
-- `expo@54.0.38` depends on `@expo/config-plugins ~54.0.6` (confirmed), so it is
-  a transitive dep and correctly kept out of the §2 pin table.
-- `@expo/config-plugins@54.0.6` depends on `xcode ^4.0.0` (confirmed).
-- `withXcodeProject` IS exported by `@expo/config-plugins@54.0.6`
-  (`build/plugins/ios-plugins.js` line 165/179; also in `build/index.js` and the
-  `.d.ts`). `withEntitlementsPlist` is exported from the same module, matching the
-  design's claim that it is a separate helper.
+### Fix 1 — Outcome return types defined; mutator return types changed (not just fields added)
 
-The earlier wrong `58.0.10` attribution flagged in the prior re-review is fully
-removed from the current document; no residual `58.0.10` reference remains in the
-plugin mechanism. `58.0.10` is correctly identified as the `latest`/SDK-58 line
-(registry confirms `latest: 58.0.10`).
+CORRECTLY APPLIED.
 
-### Fix 2 — pinned Expo name 'Goalie' / slug 'goalie' + runtime scheme derivation (§2 / §3 / §8)
-Satisfied. §2 adds an "Expo app identity (PINNED)" note fixing `name: "Goalie"`,
-`slug: "goalie"` in `app.config.ts`, and explains that `expo prebuild` derives
-`ios/Goalie.xcworkspace` and the `Goalie` scheme from `name`. §3's layout header
-matches. The §8 compile command does NOT hardcode the names: it resolves the
-workspace via `ios/*.xcworkspace` and the scheme at runtime via
-`xcodebuild -list`, so a later rename cannot silently break verification. Bundle
-ids / app group are correctly stated to be independent of `name`. Internally
-consistent.
+- §6.1 defines both return shapes concretely:
+  `CompleteLessonOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorPracticeAttempt: PriorPracticeAttempt | null }`
+  and `MasteryOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorByQuestionId: Record<string, PriorQuestionAttempt | null> }`.
+- The two context signatures are pinned exactly as required:
+  `completeLesson: (trackId, levelId, lessonId, practiceAnswer?) => Promise<CompleteLessonOutcome>` and
+  `recordMasteryResult: (trackId, levelId, result) => Promise<MasteryOutcome>`.
+- The doc is explicit that this is a RETURN-TYPE change, not a field addition: §6.1 ("changes these two members' RETURN TYPES ... it is not merely widened with extra fields") and the §10 provider entry repeat it ("changes the RETURN TYPES ... not merely adds fields ... from `Promise<void>`").
+- `completeLesson` gains the optional `practiceAnswer?: string` param, and the wrapper pseudocode in §6.1 threads it through to `hadText` and (via §6.2) to `coachPractice`.
 
-### Fix 3 — Device.osVersion typed `string | null` → OSTooOld (§6 step 4 / §8)
-Satisfied and verified against source. `expo-device@8.0.10`'s
-`build/Device.d.ts` declares `export declare const osVersion: string | null;` —
-exactly the type the design now states (previously mischaracterized as `string`).
-The fail-closed handling is correct: `parseInt(Device.osVersion ?? '', 10)` with
-`null`/empty/malformed → `NaN` → treated as `OSTooOld`. Confirmed at runtime:
-`parseInt(null,10)` and `parseInt('',10)` are both `NaN`; `"18.5"`→18, `"16.0"`→16
-(eligible), `"15.7"`→15 (OSTooOld). The `?? ''` is necessary because
-`parseInt(null, 10)` would not type-check under strict TS against a `string | null`
-value — the design handles this correctly. The `null → OSTooOld` example is
-present in §6 and in the §8 parse-rule test list. `Device.isDevice: boolean`
-(used by §6 step 2 Simulator) also confirmed.
+Verified against source: `src/ui/context/ProgressionProvider.tsx` today declares both members as `=> Promise<void>` and `completeLesson` currently takes only `(trackId, levelId, lessonId)` — so the doc's described starting state and the required change are accurate, and the screens genuinely could not read `badgeEarned`/`priorPracticeAttempt` off a `void` under TS strict without this change.
 
-### Fix 4 — selectionSummary recomputed from decoded selection.v1 (§4.3 step c)
-Satisfied. Step c now states `selectionSummary` is "recomputed from the same
-decoded `selection.v1` used to build the shield in step b" — decode the persisted
-`FamilyActivitySelection` and format `"<n> apps, <m> categories"` with
-`n = applicationTokens.count`, `m = categoryTokens.count`, identical to the §4.4
-derivation. It is explicitly NOT carried over from picker time, closing the
-stale/empty-summary drift. Consistent with §4.1 (`getActiveSession` returns the
-persisted summary) and §4.4 (same count formula). No conflict introduced.
+### Fix 2 — Smoke-test harness extensions specified
 
-### Fix 5 — defensive stopMonitoring before startMonitoring (§4.3 step a)
-Satisfied. Step a now calls `DeviceActivityCenter().stopMonitoring([activityName])`
-inside a `do/catch` BEFORE `startMonitoring`, "regardless of session state," to
-clear an orphaned schedule left by a prior failed start whose rollback
-`stopMonitoring` itself threw. The design correctly explains why the
-`E_SESSION_ACTIVE` guard (keyed only off `session.v1`) does not cover this case,
-so the defensive clear is the right fix. This is ordering-safe: the defensive
-clear precedes the `startMonitoring`, and the schedule-before-shield invariant
-(shield only applied after a successful `startMonitoring`) is preserved. No new
-conflict with step 3.0 (which still rejects a genuine concurrent start when
-`session.v1` exists) or step 4 (`stopFocusSession` idempotency).
+CORRECTLY APPLIED. All four sub-requirements are present in the §8 "Harness extensions" binding note:
 
-## Check for new blocking gaps introduced by the fixes
-None found. The five changes are localized and internally consistent with the
-surrounding already-approved flow (§4.1 surface, §4.4 constants/serialization, §6
-precedence, §8 verification). The §8 scheme selection
-(`schemes.find(x => x === "Goalie") ?? schemes[0]`) was verified to behave
-correctly even when an extension-related scheme sorts first, and the rationale
-(extension app-extension targets emit no shared scheme) is sound.
+1. `mount(routeName, params, { clock })` forwarding a `FakeClock` into `<ProgressionProvider clock={clock}>`, with the omitted-clock case falling back to `systemClock` so existing call sites stay valid.
+2. `Result` and `MasteryResult` registered in `ROUTE_COMPONENTS` so the completion flows (tests 26/27/29a) can run through those screens.
+3. A re-mount-from-saved-AsyncStorage-doc helper (`remount(...)`) providing the reopen simulation that tests 26 and 29a depend on.
+4. The `comparison.improved` honesty assertion is split per the offered option: the smoke test (§8.29a) asserts the **rendered** "improved"/"last time" comparison copy, while the raw `comparison.improved === true` boolean assertion lives in the pure `coaching.test.ts` §8.14. §8.29a is reworded consistently, and the rationale (`renderedText` observes only rendered strings) is stated.
+
+Verified against source: `__tests__/screens.smoke.test.tsx` currently defines `mount(routeName, params)` with no options object, hard-codes `<ProgressionProvider>` with no `clock` prop, and `ROUTE_COMPONENTS` registers only `Focus`/`CoursePath`/`Progress`. The harness gaps the fix describes are real, and the extensions named are exactly what tests 26/29a/29b/29c need.
+
+### Fix 3 — v1-shaped `store.test.ts` cases rewritten to v2 via `defaultPersistedData()`
+
+CORRECTLY APPLIED.
+
+- §5.3 states the pre-existing v1 round-trip and the two deletion tests are rewritten to the v2 shape via `defaultPersistedData()` (build inputs from the full v2 default, not a v1 literal), and explains WHY they would otherwise break (a loaded v1 doc returns a v2 doc, failing `expect(loaded).toEqual(data)` and `expect(warn).not.toHaveBeenCalled()`).
+- The former v1 round-trip explicitly becomes the migrate-and-write-back case §8.18 ("This is the rewritten former v1 round-trip case").
+- The deletion cases become §8.25, saving v2 docs so `clearData` → load equals `defaultPersistedData()`.
+- §8's persistence header repeats the same mapping, keeping the two sections consistent.
+
+Verified against source: `__tests__/store.test.ts` currently contains exactly the at-risk cases — a `version: 1` round-trip asserting `expect(loaded).toEqual(data)` + `expect(warn).not.toHaveBeenCalled()`, and two `version: 1` deletion tests. The fix targets real tests that would indeed go red post-migration, and the rewrite destination (§8.18 / §8.25) is specified.
+
+### Fix 4 — Dead recompute + import removed from both screens; completion copy driven by `badgeEarned !== null`
+
+CORRECTLY APPLIED.
+
+- §6.2 states both `ResultScreen` and `MasteryResultScreen` drive the existing "You completed the `<level>` level." copy from `badgeEarned !== null` (the same `false→true` completeness edge the local recompute used), and REMOVE the now-dead local `deriveCompletionEvents`/`isLevelComplete` recompute AND its `import { deriveCompletionEvents } from '../../domain/rewards'` (noting eslint would otherwise flag the unused import).
+- The §10 entries for both screen files record the removal, so files-touched and the narrative agree.
+
+Verified against source: both `ResultScreen.tsx` and `MasteryResultScreen.tsx` today `import { deriveCompletionEvents } from '../../domain/rewards'`, import `isLevelComplete` from `../../domain/progression`, compute `const events = deriveCompletionEvents(before, after, level, track.id)`, set `justCompletedLevel` from `events.length > 0 || isLevelComplete(...)`, and gate the "You completed the {level.title} level." text on `justCompletedLevel`. The import path named in the fix (`../../domain/rewards`) matches the actual import line exactly, and the copy string matches. The fix is precise and correct. (Note `isLevelComplete` is imported from `../../domain/progression`, not rewards — the fix text says to remove the rewards-path `deriveCompletionEvents` import specifically and the dead `isLevelComplete` recompute usage; it does not misstate the import path for the removed import.)
+
+### Fix 5 — Mastery wrapper return type named `MasteryOutcome` to avoid collision
+
+CORRECTLY APPLIED.
+
+- §6.1 names the mastery wrapper's return type `MasteryOutcome`, explicitly distinct from the domain `MasteryResult` type (`src/domain/assessment`) and the `RootStackParamList.MasteryResult` route param the provider module already references, "so the provider module carries no third same-named symbol and no shadow."
+- `CompleteLessonOutcome` is likewise distinct from the domain types.
+- The §10 provider entry notes the same naming choice.
+
+Verified against source: `src/ui/navigation/RootNavigator.tsx` defines `MasteryResult: { trackId; levelId; answers: number[] }` as a route param, and `ProgressionProvider.tsx` already imports/uses the domain `MasteryResult` (via the `recordMasteryResult` signature). So two `MasteryResult` symbols already exist in the provider's reference graph; naming the wrapper return `MasteryOutcome` genuinely avoids a third collision. The rationale is sound and the naming is consistent everywhere it appears (§6.1, §6.2, §10, §12.2 Fix 5).
+
+---
+
+## Cross-consistency checks (no new blocking contradictions introduced by the fixes)
+
+- The `CompleteLessonOutcome`/`MasteryOutcome` shapes in §6.1 match how the wrappers return them in the §6.1 pseudocode (`return { outcome, badgeEarned, priorPracticeAttempt }` / `{ outcome, badgeEarned, priorByQuestionId }`) and how §6.2 screens consume them (reading `badgeEarned`, `priorPracticeAttempt`, `priorByQuestionId`). Consistent.
+- §8.29a (rendered copy) and §8.14 (raw boolean) do not overlap or contradict — they cover different layers of the same honesty rule. Consistent with Fix 2's split.
+- The `badgeEarned !== null` completion-copy driver (Fix 4) matches the badge semantics elsewhere (`applyBadge` fires once on the `false→true` edge, §3.6), so replacing the local recompute with `badgeEarned` is behavior-preserving, not a semantic change. Consistent.
+- Fix 1's `practiceAnswer?` param is consistent with §6.2 (ResultScreen passes `route.params.practiceAnswer ?? ''` to `coachPractice`), §6.4 (`practiceAnswer` population + `hadText` rule), and the §10 RootNavigator entry (`Result` gains optional `practiceAnswer?: string`). Consistent.
+- Fix 2's `remount` helper is referenced consistently by tests 26 and 29a; the clock seam it forwards matches the §6.1 provider prop `clock = systemClock`. Consistent.
+
+No new ambiguity, no unverified assumption, no conflicting section, and no feasibility gap was found in the five fixes. All five are also grounded in the actual current source, which I read rather than trusting the doc's characterization.
+
+---
 
 ## Verified Assumptions
-- `@expo/config-plugins` `sdk-54` dist-tag is `54.0.6`. (npm registry)
-- `expo@54.0.38` depends on `@expo/config-plugins ~54.0.6`. (npm registry)
-- `@expo/config-plugins@54.0.6` depends on `xcode ^4.0.0`. (npm registry)
-- `@expo/config-plugins@54.0.6` exports `withXcodeProject` and
-  `withEntitlementsPlist`. (packed tarball `build/plugins/ios-plugins.js`)
-- `expo-device@8.0.10` declares `osVersion: string | null` and
-  `isDevice: boolean`. (packed tarball `build/Device.d.ts`)
-- `58.0.10` is the `latest`/SDK-58 config-plugins line, not SDK 54. (npm registry)
-- Runtime: `parseInt(null,10)`/`parseInt('',10)` → `NaN`; `"18.5"`/`"16.0"`
-  eligible, `"15.7"` OSTooOld; scheme `find("Goalie") ?? [0]` selects `Goalie`.
-  (node)
+
+- The provider currently declares `completeLesson`/`recordMasteryResult` as `Promise<void>` and `completeLesson` takes only `(trackId, levelId, lessonId)` — confirmed in `src/ui/context/ProgressionProvider.tsx`. (Supports Fix 1.)
+- The smoke-test harness currently has `mount(routeName, params)` with no clock/options and `ROUTE_COMPONENTS = { Focus, CoursePath, Progress }` only — confirmed in `__tests__/screens.smoke.test.tsx`. (Supports Fix 2.)
+- `store.test.ts` currently has v1-shaped (`version: 1`) round-trip and deletion tests asserting `toEqual(data)` and `warn not called` — confirmed in `__tests__/store.test.ts`. (Supports Fix 3.)
+- Both `ResultScreen.tsx` and `MasteryResultScreen.tsx` currently `import { deriveCompletionEvents } from '../../domain/rewards'`, recompute `events`, derive `justCompletedLevel`, and render "You completed the {level.title} level." from it — confirmed via grep of both files. (Supports Fix 4.)
+- `RootStackParamList.MasteryResult` is a route param and the domain `MasteryResult` type is referenced by the provider — confirmed in `RootNavigator.tsx` and `ProgressionProvider.tsx`. (Supports Fix 5's collision rationale.)
 
 ## Unverified / Wrong Assumptions
-- Swift-side claims in fixes 4 and 5 (`FamilyActivitySelection` JSON round-trip,
-  `DeviceActivityCenter().stopMonitoring`/`startMonitoring`, `UUID().uuidString`)
-  cannot be compiled or executed in this environment — they are design-level and
-  match Apple's documented APIs, but their real behavior is deferred to the
-  compile ceiling (§8) and ultimately a physical device. This is consistent with
-  the design's own §7 compile-only ceiling and is NOT a blocking finding for this
-  focused fix re-review.
-- No wrong assumptions found among the five fixes.
 
-## Findings
-No HIGH, MEDIUM, or NIT findings. All five targeted fixes are correctly and
-completely addressed, verified against live package sources where claims were
-checkable, and no fix introduced a new blocking gap.
+- None. Every fix claim was checkable against the repo source and matched. No design claim about existing code was found to be inaccurate.
+
+---
 
 ## Verdict
-APPROVED (0 HIGH / 0 MEDIUM / 0 NIT).
+
+All 5 mandated fixes are present, specified concretely, internally consistent, and accurately grounded in the actual current source. No new blocking contradiction was introduced.
+
+HIGH findings: 0
+MEDIUM findings: 0
+NIT findings: 0
+
+Mechanical verdict (HIGH + MEDIUM == 0): **APPROVED**.
