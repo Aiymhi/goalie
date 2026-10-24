@@ -1,0 +1,16 @@
+{
+  "name": "goalie-coaching-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Optional, isolated AI coaching server for Goalie. NOT part of the mobile app bundle or the root package.json — it has its own dependencies and lockfile.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "4.17.21"
+  }
+}

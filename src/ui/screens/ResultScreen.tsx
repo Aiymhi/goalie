@@ -21,7 +21,12 @@ import {
   View,
 } from 'react-native';
 
-import { coachPractice, PriorPracticeAttempt } from '../../domain/coaching';
+import { fetchAiHint } from '../../ai/coachingClient';
+import {
+  CoachingFeedback,
+  coachPractice,
+  PriorPracticeAttempt,
+} from '../../domain/coaching';
 import { LevelId } from '../../domain/content/catalog.types';
 import { RewardOutcome } from '../../domain/rewards';
 import { useProgression } from '../context/ProgressionProvider';
@@ -36,12 +41,17 @@ type SaveStatus = 'saving' | 'saved' | 'failed';
 
 export function ResultScreen({ route, navigation }: Props) {
   const { trackId, levelId, lessonId, practiceAnswer } = route.params;
-  const { status, error, catalog, completeLesson, reload } = useProgression();
+  const { status, error, catalog, completeLesson, reload, aiCoaching } =
+    useProgression();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saving');
   const [outcome, setOutcome] = useState<RewardOutcome | null>(null);
   const [badgeEarned, setBadgeEarned] = useState<string | null>(null);
   const [priorPractice, setPriorPractice] =
     useState<PriorPracticeAttempt | null>(null);
+  // Optional AI hint. Null until (and unless) a fully-validated AI response
+  // replaces the local practice hint. The feature is off by default; the UI
+  // never blocks on the network and never surfaces a raw error for this path.
+  const [aiHint, setAiHint] = useState<string | null>(null);
   // Guard so the on-arrival completion write runs exactly once per mount. The
   // completeLesson callback is recreated on every persisted data change; without
   // this guard the effect would re-fire in a loop (completeLesson -> persist ->
@@ -90,6 +100,48 @@ export function ResultScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, track, level, lesson]);
 
+  // Optional AI practice-hint path (off by default). Runs only after a
+  // successful save, never blocks the UI, and falls back silently to the local
+  // hint on any failure. It replaces ONLY the practice hint — never the score,
+  // XP, badge, streak, or certificate (those are deterministic domain code the
+  // AI path cannot reach).
+  useEffect(() => {
+    if (saveStatus !== 'saved' || lesson === null) {
+      return;
+    }
+    if (!aiCoaching.enabled || !aiCoaching.endpointUrl) {
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const hint = await fetchAiHint(
+        {
+          lessonId: lesson.id,
+          prompt: lesson.practice.prompt,
+          suggestedAnswer: lesson.practice.answer,
+          studentText: practiceAnswer ?? '',
+        },
+        {
+          enabled: aiCoaching.enabled,
+          endpointUrl: aiCoaching.endpointUrl,
+          timeoutMs: 4000,
+        },
+      );
+      if (active && hint !== null) {
+        setAiHint(hint);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [
+    saveStatus,
+    lesson,
+    aiCoaching.enabled,
+    aiCoaching.endpointUrl,
+    practiceAnswer,
+  ]);
+
   if (status === 'loading') {
     return <LoadingState label="Loading result…" />;
   }
@@ -115,7 +167,13 @@ export function ResultScreen({ route, navigation }: Props) {
   // provider attemptHistory, which already reflects this visit's write). The
   // currentAnswerText is exactly what Practice forwarded, so coaching and
   // hadText are grounded in the same value.
-  const coaching = coachPractice(lesson, practiceAnswer ?? '', priorPractice);
+  const localCoaching = coachPractice(lesson, practiceAnswer ?? '', priorPractice);
+  // A validated AI hint replaces ONLY the hint and flips source to 'ai';
+  // strength/improvement/comparison stay deterministic. Null -> local hint.
+  const coaching: CoachingFeedback =
+    aiHint !== null
+      ? { ...localCoaching, hint: aiHint, source: 'ai' }
+      : localCoaching;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
