@@ -4,13 +4,14 @@
 // complete yet.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LevelId } from '../../domain/content/catalog.types';
 
 import { buildCertificatePreview } from '../../domain/certificates';
 import { useProgression } from '../context/ProgressionProvider';
-import { EmptyState, ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, MIN_TOUCH_TARGET, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findTrack } from './catalogLookup';
 
@@ -36,12 +37,13 @@ export function CertificateScreen({ route, navigation }: Props) {
     useProgression();
 
   if (status === 'loading') {
-    return <LoadingState label="Loading certificate preview…" />;
+    return <Screen status="loading" loadingLabel="Loading certificate preview…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the certificate preview.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the certificate preview.'}
         onRetry={reload}
       />
     );
@@ -50,8 +52,9 @@ export function CertificateScreen({ route, navigation }: Props) {
   const track = findTrack(catalog, trackId);
   if (track === null) {
     return (
-      <ErrorState
-        message={`Track "${trackId}" not found.`}
+      <Screen
+        status="error"
+        errorMessage={`Track "${trackId}" not found.`}
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -67,15 +70,16 @@ export function CertificateScreen({ route, navigation }: Props) {
 
   if (preview.completedLevels.length === 0) {
     return (
-      <EmptyState
-        title="Nothing to preview yet"
-        detail="Complete a level to preview your certificate."
+      <Screen
+        status="empty"
+        emptyTitle="Nothing to preview yet"
+        emptyDetail="Complete a level to preview your certificate."
       />
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <Text style={styles.banner}>
         Preview — not an official certificate; full PDF in a later release.
       </Text>
@@ -112,53 +116,45 @@ export function CertificateScreen({ route, navigation }: Props) {
           {preview.trackComplete ? 'Yes' : 'Not yet'}
         </Text>
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 16,
-  },
   banner: {
-    backgroundColor: '#fff4e5',
-    borderColor: '#d9822b',
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 13,
-    color: '#8a5a00',
-    fontWeight: '600',
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    ...typography.label,
+    color: colors.warning,
   },
   card: {
-    borderColor: '#ddd',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 16,
-    gap: 4,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.xs,
   },
   cardLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
     textTransform: 'uppercase',
   },
   cardValue: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  levelItem: {
-    fontSize: 15,
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
   levelButton: {
-    minHeight: 48,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
   },
   levelButtonText: {
-    fontSize: 15,
-    color: '#1f6feb',
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.accent,
   },
 });
 

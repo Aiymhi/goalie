@@ -4,19 +4,16 @@
 // Renders the finance disclaimer banner for the finance track.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { LevelId } from '../../domain/content/catalog.types';
 import { viewLevelProgress } from '../../domain/progression';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
+import { Card } from '../components/Card';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -27,12 +24,13 @@ export function CoursePathScreen({ route, navigation }: Props) {
   const { status, error, catalog, progression, reload } = useProgression();
 
   if (status === 'loading') {
-    return <LoadingState label="Loading course path…" />;
+    return <Screen status="loading" loadingLabel="Loading course path…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the course path.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the course path.'}
         onRetry={reload}
       />
     );
@@ -41,8 +39,9 @@ export function CoursePathScreen({ route, navigation }: Props) {
   const track = findTrack(catalog, trackId);
   if (track === null) {
     return (
-      <ErrorState
-        message={`Track "${trackId}" not found.`}
+      <Screen
+        status="error"
+        errorMessage={`Track "${trackId}" not found.`}
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -50,7 +49,7 @@ export function CoursePathScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -60,7 +59,7 @@ export function CoursePathScreen({ route, navigation }: Props) {
       {track.levels.map((level) => {
         const view = viewLevelProgress(progression, level, track.id);
         return (
-          <View key={level.id} style={styles.card}>
+          <Card key={level.id}>
             <View style={styles.cardHeader}>
               <Text style={styles.levelTitle}>{level.title}</Text>
               {view.complete ? (
@@ -81,9 +80,11 @@ export function CoursePathScreen({ route, navigation }: Props) {
 
             <View style={styles.actions}>
               {level.lessons.map((lesson) => (
-                <Pressable
+                <AppButton
                   key={lesson.id}
-                  style={styles.lessonLink}
+                  label={lesson.title}
+                  variant="secondary"
+                  accessibilityLabel={`Open lesson ${lesson.title}`}
                   onPress={() =>
                     navigation.navigate('Lesson', {
                       trackId: track.id,
@@ -91,48 +92,30 @@ export function CoursePathScreen({ route, navigation }: Props) {
                       lessonId: lesson.id,
                     })
                   }
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open lesson ${lesson.title}`}
-                >
-                  <Text style={styles.lessonLinkText}>{lesson.title}</Text>
-                </Pressable>
+                />
               ))}
-              <Pressable
-                style={styles.masteryLink}
+              <AppButton
+                label="Mastery check"
+                accessibilityLabel={`Open ${level.title} mastery check`}
                 onPress={() =>
                   navigation.navigate('Mastery', {
                     trackId: track.id,
                     levelId: level.id as LevelId,
                   })
                 }
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${level.title} mastery check`}
-              >
-                <Text style={styles.masteryLinkText}>Mastery check</Text>
-              </Pressable>
+              />
             </View>
-          </View>
+          </Card>
         );
       })}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 16,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  card: {
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 16,
-    gap: 6,
+    ...typography.title,
+    color: colors.ink,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -140,52 +123,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   levelTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.heading,
+    color: colors.ink,
   },
   complete: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0a7d28',
+    ...typography.label,
+    color: colors.success,
   },
   objective: {
-    fontSize: 14,
-    color: '#444',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   progress: {
-    fontSize: 14,
+    ...typography.body,
+    color: colors.ink,
   },
   passRule: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: spacing.xs,
   },
   actions: {
-    marginTop: 8,
-    gap: 8,
-  },
-  lessonLink: {
-    minHeight: 44,
-    justifyContent: 'center',
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  lessonLinkText: {
-    fontSize: 15,
-  },
-  masteryLink: {
-    minHeight: 44,
-    justifyContent: 'center',
-    backgroundColor: '#eef4ff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  masteryLinkText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1f6feb',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
 });
 

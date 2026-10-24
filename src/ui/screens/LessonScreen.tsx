@@ -3,12 +3,14 @@
 // lessonId (shows "lesson not found" + back, never crashes). CTA -> Practice.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { LevelId } from '../../domain/content/catalog.types';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLesson, findLevel, findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -19,12 +21,13 @@ export function LessonScreen({ route, navigation }: Props) {
   const { status, error, catalog, reload } = useProgression();
 
   if (status === 'loading') {
-    return <LoadingState label="Loading lesson…" />;
+    return <Screen status="loading" loadingLabel="Loading lesson…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the lesson.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the lesson.'}
         onRetry={reload}
       />
     );
@@ -35,8 +38,9 @@ export function LessonScreen({ route, navigation }: Props) {
   const lesson = level ? findLesson(level, lessonId) : null;
   if (track === null || level === null || lesson === null) {
     return (
-      <ErrorState
-        message="Lesson not found."
+      <Screen
+        status="error"
+        errorMessage="Lesson not found."
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -44,7 +48,7 @@ export function LessonScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -60,8 +64,9 @@ export function LessonScreen({ route, navigation }: Props) {
       <Text style={styles.sectionLabel}>Worked example</Text>
       <Text style={styles.body}>{lesson.workedExample}</Text>
 
-      <Pressable
-        style={styles.primary}
+      <AppButton
+        label="Practice this lesson"
+        accessibilityLabel="Go to practice"
         onPress={() =>
           navigation.navigate('Practice', {
             trackId: track.id,
@@ -69,46 +74,29 @@ export function LessonScreen({ route, navigation }: Props) {
             lessonId: lesson.id,
           })
         }
-        accessibilityRole="button"
-        accessibilityLabel="Go to practice"
-      >
-        <Text style={styles.primaryText}>Practice this lesson</Text>
-      </Pressable>
-    </ScrollView>
+        style={styles.cta}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 8,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
+    textTransform: 'uppercase',
   },
   body: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
+    color: colors.ink,
   },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.lg,
   },
 });
 

@@ -1,20 +1,19 @@
 // Consistent loading / empty / error rendering so no screen invents its own
 // ad-hoc blank. Loading is explicit (spinner + label). Error shows the
 // underlying message and a recovery action. Empty is distinct from loading.
+// Colours/spacing come from the shared theme so these primitives match the
+// rest of the app.
 
 import { ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+
+import { colors, radii, spacing, typography } from '../theme';
+import { AppButton } from './AppButton';
 
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
   return (
     <View style={styles.center}>
-      <ActivityIndicator accessibilityLabel="Loading" />
+      <ActivityIndicator accessibilityLabel="Loading" color={colors.accent} />
       <Text style={styles.label}>{label}</Text>
     </View>
   );
@@ -52,14 +51,12 @@ export function ErrorState({
       <Text style={styles.errorTitle}>Something went wrong</Text>
       <Text style={styles.detail}>{message}</Text>
       {onRetry ? (
-        <Pressable
-          style={styles.button}
+        <AppButton
+          label={retryLabel}
           onPress={onRetry}
-          accessibilityRole="button"
           accessibilityLabel={retryLabel}
-        >
-          <Text style={styles.buttonText}>{retryLabel}</Text>
-        </Pressable>
+          style={styles.button}
+        />
       ) : null}
     </View>
   );
@@ -70,41 +67,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
-    gap: 12,
+    padding: spacing.xl,
+    gap: spacing.md,
+    backgroundColor: colors.background,
   },
   label: {
-    fontSize: 15,
-    color: '#444',
+    ...typography.body,
+    color: colors.inkMuted,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.heading,
+    color: colors.ink,
     textAlign: 'center',
   },
   errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#b00020',
+    ...typography.heading,
+    color: colors.danger,
     textAlign: 'center',
   },
   detail: {
-    fontSize: 14,
-    color: '#444',
+    ...typography.caption,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
   button: {
-    minHeight: 48,
-    minWidth: 120,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1f6feb',
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    minWidth: 140,
+    borderRadius: radii.sm,
   },
 });

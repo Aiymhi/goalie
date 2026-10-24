@@ -13,12 +13,13 @@
 //     status, remaining time, and an always-visible Emergency release.
 //   - It never claims unbreakable blocking; the compile-only verification
 //     ceiling is stated inline.
+// Phase 7: restyled onto the shared theme + AppButton/Card. Behaviour, copy,
+// and honest states are unchanged.
 
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -27,6 +28,10 @@ import {
 import { MAX_DURATION_SECONDS, MIN_DURATION_SECONDS } from '../../domain/focus-session';
 import { REASON_TEXT } from '../focus/reasonText';
 import { useFocusSession } from '../focus/useFocusSession';
+import { AppButton } from '../components/AppButton';
+import { Card } from '../components/Card';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 
 // Preset durations (seconds), all inside the enforced [60, 86400] bounds.
 const DURATION_OPTIONS: { label: string; seconds: number }[] = [
@@ -68,25 +73,28 @@ export function FocusScreen() {
 
   if (availability === null) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <Text style={styles.title}>Focus protection</Text>
         <View style={styles.statusRow}>
-          <ActivityIndicator accessibilityLabel="Checking focus availability" />
+          <ActivityIndicator
+            accessibilityLabel="Checking focus availability"
+            color={colors.accent}
+          />
           <Text style={styles.status}>Checking…</Text>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   if (!availability.available) {
     return (
-      <View style={styles.container}>
+      <Screen>
         <Text style={styles.title}>Focus protection</Text>
         <Text style={[styles.status, styles.unavailable]}>
           Focus protection unavailable ({availability.reason})
         </Text>
         <Text style={styles.detail}>{REASON_TEXT[availability.reason]}</Text>
-      </View>
+      </Screen>
     );
   }
 
@@ -95,10 +103,7 @@ export function FocusScreen() {
   const canStart = selectionSummary !== null && !isActive;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
+    <Screen>
       <Text style={styles.title}>Focus protection</Text>
 
       <Text style={styles.ceiling}>
@@ -107,7 +112,7 @@ export function FocusScreen() {
       </Text>
 
       {isActive && record !== null ? (
-        <View style={styles.activeCard}>
+        <Card tone="accent">
           <Text style={styles.activeHeading}>Focus is on</Text>
           <Text style={styles.detail}>
             Restricting: {record.selectionSummary}
@@ -119,30 +124,23 @@ export function FocusScreen() {
             Releases automatically at the deadline, whatever your lesson or quiz
             state. This countdown is display-only — the device release ends it.
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.button, styles.releaseButton]}
+          <AppButton
+            label="Emergency release"
+            variant="danger"
             onPress={() => {
               emergencyRelease();
             }}
-          >
-            <Text style={styles.buttonText}>Emergency release</Text>
-          </Pressable>
-        </View>
+          />
+        </Card>
       ) : (
         <View style={styles.setupCard}>
           <Text style={styles.sectionHeading}>1. Pick apps to restrict</Text>
-          <Pressable
-            accessibilityRole="button"
-            style={styles.button}
+          <AppButton
+            label={selectionSummary === null ? 'Choose apps' : 'Change selection'}
             onPress={() => {
               presentPicker();
             }}
-          >
-            <Text style={styles.buttonText}>
-              {selectionSummary === null ? 'Choose apps' : 'Change selection'}
-            </Text>
-          </Pressable>
+          />
           <Text style={styles.detail}>
             {selectionSummary === null
               ? 'No apps selected yet.'
@@ -157,6 +155,7 @@ export function FocusScreen() {
                 <Pressable
                   key={option.seconds}
                   accessibilityRole="button"
+                  accessibilityLabel={`Set duration ${option.label}`}
                   accessibilityState={{ selected }}
                   style={[
                     styles.durationChip,
@@ -182,7 +181,7 @@ export function FocusScreen() {
           </Text>
 
           <Text style={styles.sectionHeading}>3. What will happen</Text>
-          <View style={styles.disclosure}>
+          <Card tone="muted">
             <Text style={styles.disclosureText}>
               When you start, the apps you picked ({selectionSummary ?? 'none yet'})
               will be blocked on this device for the chosen duration.
@@ -196,19 +195,15 @@ export function FocusScreen() {
               You can end it at any time with Emergency release. Nothing here is
               permanent or unbreakable.
             </Text>
-          </View>
+          </Card>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canStart }}
+          <AppButton
+            label="Start focus"
             disabled={!canStart}
-            style={[styles.button, !canStart && styles.buttonDisabled]}
             onPress={() => {
               start(selectedSeconds);
             }}
-          >
-            <Text style={styles.buttonText}>Start focus</Text>
-          </Pressable>
+          />
           {!canStart ? (
             <Text style={styles.detail}>
               Pick at least one app before starting.
@@ -222,127 +217,91 @@ export function FocusScreen() {
           ) : null}
         </View>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-  },
-  content: {
-    gap: 12,
-    paddingBottom: 48,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   ceiling: {
-    fontSize: 13,
-    color: '#8a5a00',
-    backgroundColor: '#fff6e0',
-    padding: 10,
-    borderRadius: 8,
+    ...typography.caption,
+    color: colors.warning,
+    backgroundColor: colors.warningSoft,
+    padding: spacing.md,
+    borderRadius: radii.sm,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   status: {
-    fontSize: 16,
+    ...typography.body,
+    color: colors.ink,
   },
   unavailable: {
-    color: '#b00020',
+    color: colors.danger,
     fontWeight: '600',
   },
   error: {
-    color: '#b00020',
+    color: colors.danger,
     fontWeight: '600',
   },
   detail: {
-    fontSize: 14,
-    color: '#444',
-    marginTop: 4,
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: spacing.xs,
   },
   setupCard: {
-    gap: 8,
-  },
-  activeCard: {
-    gap: 10,
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#eef4ff',
+    gap: spacing.sm,
   },
   activeHeading: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.heading,
+    color: colors.ink,
   },
   remaining: {
     fontSize: 32,
+    lineHeight: 38,
     fontWeight: '700',
+    color: colors.ink,
     fontVariant: ['tabular-nums'],
   },
   sectionHeading: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
+    ...typography.bodyStrong,
+    color: colors.ink,
+    marginTop: spacing.md,
   },
   durationRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   durationChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: '#9bb0d6',
+    borderColor: colors.accent,
   },
   durationChipSelected: {
-    backgroundColor: '#2f5bd6',
-    borderColor: '#2f5bd6',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   durationChipText: {
-    fontSize: 14,
-    color: '#2f5bd6',
-    fontWeight: '600',
+    ...typography.label,
+    color: colors.accent,
   },
   durationChipTextSelected: {
-    color: '#fff',
-  },
-  disclosure: {
-    gap: 6,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fafafa',
+    color: colors.onAccent,
   },
   disclosureText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  button: {
-    backgroundColor: '#2f5bd6',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#9bb0d6',
-  },
-  releaseButton: {
-    backgroundColor: '#b00020',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.caption,
+    color: colors.ink,
   },
 });
 

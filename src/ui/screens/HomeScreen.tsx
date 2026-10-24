@@ -5,18 +5,14 @@
 // Settings. Honest loading/empty/error states.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Level, LevelId, Track } from '../../domain/content/catalog.types';
 import { isLevelComplete, viewLevelProgress } from '../../domain/progression';
 import { useProgression } from '../context/ProgressionProvider';
-import { EmptyState, ErrorState, LoadingState } from '../components/ScreenState';
+import { AppButton } from '../components/AppButton';
+import { Screen } from '../components/Screen';
+import { colors, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findTrack } from './catalogLookup';
 
@@ -77,30 +73,28 @@ export function HomeScreen({ navigation }: Props) {
     useProgression();
 
   if (status === 'loading') {
-    return <LoadingState label="Loading your progress…" />;
+    return <Screen status="loading" loadingLabel="Loading your progress…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load your progress.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load your progress.'}
         onRetry={reload}
       />
     );
   }
   if (selectedTrackId === null) {
     return (
-      <EmptyState
-        title="Start your first lesson"
-        detail="Choose a track to begin."
-        action={
-          <Pressable
-            style={styles.primary}
+      <Screen
+        status="empty"
+        emptyTitle="Start your first lesson"
+        emptyDetail="Choose a track to begin."
+        emptyAction={
+          <AppButton
+            label="Choose a track"
             onPress={() => navigation.navigate('TrackSelect')}
-            accessibilityRole="button"
-            accessibilityLabel="Choose a track"
-          >
-            <Text style={styles.primaryText}>Choose a track</Text>
-          </Pressable>
+          />
         }
       />
     );
@@ -109,8 +103,9 @@ export function HomeScreen({ navigation }: Props) {
   const track = findTrack(catalog, selectedTrackId);
   if (track === null) {
     return (
-      <ErrorState
-        message={`Selected track "${selectedTrackId}" is no longer available.`}
+      <Screen
+        status="error"
+        errorMessage={`Selected track "${selectedTrackId}" is no longer available.`}
         onRetry={() => navigation.navigate('TrackSelect')}
         retryLabel="Choose a track"
       />
@@ -137,7 +132,7 @@ export function HomeScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <Text style={styles.title}>Goalie</Text>
       <Text style={styles.greeting}>
         {displayName ? `Welcome back, ${displayName}` : 'Welcome back'}
@@ -145,92 +140,56 @@ export function HomeScreen({ navigation }: Props) {
       <Text style={styles.trackName}>{track.title}</Text>
 
       <Text style={styles.sectionLabel}>Your next step</Text>
-      <Pressable
-        style={styles.primary}
-        onPress={runAction}
-        accessibilityRole="button"
-        accessibilityLabel={action.label}
-      >
-        <Text style={styles.primaryText}>{action.label}</Text>
-      </Pressable>
+      <AppButton label={action.label} onPress={runAction} />
 
       <View style={styles.links}>
-        <SecondaryLink
+        <AppButton
           label="Course path"
+          variant="secondary"
           onPress={() => navigation.navigate('CoursePath', { trackId: track.id })}
         />
-        <SecondaryLink label="Progress" onPress={() => navigation.navigate('Progress')} />
-        <SecondaryLink label="Focus" onPress={() => navigation.navigate('Focus')} />
-        <SecondaryLink label="Settings" onPress={() => navigation.navigate('Settings')} />
+        <AppButton
+          label="Progress"
+          variant="secondary"
+          onPress={() => navigation.navigate('Progress')}
+        />
+        <AppButton
+          label="Focus"
+          variant="secondary"
+          onPress={() => navigation.navigate('Focus')}
+        />
+        <AppButton
+          label="Settings"
+          variant="secondary"
+          onPress={() => navigation.navigate('Settings')}
+        />
       </View>
-    </ScrollView>
-  );
-}
-
-function SecondaryLink({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      style={styles.link}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <Text style={styles.linkText}>{label}</Text>
-    </Pressable>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 12,
-  },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    ...typography.display,
+    color: colors.ink,
   },
   greeting: {
-    fontSize: 16,
-    color: '#444',
+    ...typography.body,
+    color: colors.inkMuted,
   },
   trackName: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.heading,
+    color: colors.ink,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-    color: '#666',
-  },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
-    textAlign: 'center',
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.md,
+    textTransform: 'uppercase',
   },
   links: {
-    marginTop: 20,
-    gap: 10,
-  },
-  link: {
-    minHeight: 48,
-    justifyContent: 'center',
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-  },
-  linkText: {
-    fontSize: 16,
+    marginTop: spacing.lg,
+    gap: spacing.md,
   },
 });
 

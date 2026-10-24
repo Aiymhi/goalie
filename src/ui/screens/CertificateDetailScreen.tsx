@@ -14,14 +14,7 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   buildCertificateData,
@@ -37,7 +30,9 @@ import {
   SharingUnavailableError,
 } from '../certificates/pdf';
 import { useProgression } from '../context/ProgressionProvider';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { AppButton } from '../components/AppButton';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLevel, findTrack } from './catalogLookup';
 import { isAvailableAsync } from 'expo-sharing';
@@ -166,25 +161,27 @@ export function CertificateDetailScreen({ route, navigation }: Props) {
   }, [resolved]);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading certificate…" />;
+    return <Screen status="loading" loadingLabel="Loading certificate…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the certificate.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the certificate.'}
         onRetry={reload}
       />
     );
   }
   if (resolved === null) {
-    return <LoadingState label="Loading certificate…" />;
+    return <Screen status="loading" loadingLabel="Loading certificate…" />;
   }
   if ('error' in resolved && resolved.error) {
     // Includes the incomplete-level case: the domain refuses, so no certificate
     // is shown — an honest message with a way back instead.
     return (
-      <ErrorState
-        message={resolved.error}
+      <Screen
+        status="error"
+        errorMessage={resolved.error}
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -194,7 +191,7 @@ export function CertificateDetailScreen({ route, navigation }: Props) {
   const data = (resolved as { data: CertificateData }).data;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <View style={styles.card}>
         <Text style={styles.brand}>GOALIE</Text>
         <Text style={styles.heading}>Certificate of Completion</Text>
@@ -220,24 +217,18 @@ export function CertificateDetailScreen({ route, navigation }: Props) {
       </View>
 
       <View style={styles.actions}>
-        <Pressable
-          style={styles.primary}
-          onPress={onSave}
-          accessibilityRole="button"
+        <AppButton
+          label="Save PDF"
           accessibilityLabel="Save certificate PDF"
-        >
-          <Text style={styles.primaryText}>Save PDF</Text>
-        </Pressable>
+          onPress={onSave}
+        />
 
         {shareAvailable === true ? (
-          <Pressable
-            style={styles.primary}
-            onPress={onShare}
-            accessibilityRole="button"
+          <AppButton
+            label="Share"
             accessibilityLabel="Share certificate"
-          >
-            <Text style={styles.primaryText}>Share</Text>
-          </Pressable>
+            onPress={onShare}
+          />
         ) : shareAvailable === false ? (
           <Text style={styles.unavailable}>
             Sharing is unavailable on this device. You can still save the PDF.
@@ -248,7 +239,7 @@ export function CertificateDetailScreen({ route, navigation }: Props) {
       {actionStatus ? <Text style={styles.status}>{actionStatus}</Text> : null}
 
       <View style={styles.postSection}>
-        <Text style={styles.sectionLabel}>Social post (editable)</Text>
+        <Text style={styles.postSectionLabel}>Social post (editable)</Text>
         <Text style={styles.postHint}>
           Edit and copy this before posting. Nothing is posted automatically and
           there is no public link.
@@ -257,118 +248,113 @@ export function CertificateDetailScreen({ route, navigation }: Props) {
           style={styles.postInput}
           value={postDraft}
           onChangeText={setPostDraft}
+          placeholderTextColor={colors.inkFaint}
           multiline
           accessibilityLabel="Editable social post"
         />
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 16,
-  },
   card: {
-    borderColor: '#1f6feb',
+    borderColor: colors.accent,
     borderWidth: 2,
-    borderRadius: 12,
-    padding: 20,
-    gap: 4,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    gap: spacing.xs,
     alignItems: 'center',
+    backgroundColor: colors.surface,
   },
   brand: {
     fontSize: 12,
     letterSpacing: 3,
-    color: '#1f6feb',
+    color: colors.accent,
     fontWeight: '700',
   },
   heading: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginVertical: 8,
+    ...typography.title,
+    color: colors.ink,
+    marginVertical: spacing.sm,
     textAlign: 'center',
   },
   name: {
+    ...typography.heading,
     fontSize: 20,
-    fontWeight: '700',
+    color: colors.ink,
     textAlign: 'center',
   },
   titles: {
-    fontSize: 16,
-    color: '#1f6feb',
-    fontWeight: '600',
-    marginBottom: 8,
+    ...typography.bodyStrong,
+    color: colors.accent,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   sectionLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 12,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.md,
     textTransform: 'uppercase',
     alignSelf: 'flex-start',
   },
   skillItem: {
-    fontSize: 14,
+    ...typography.caption,
+    color: colors.ink,
     alignSelf: 'flex-start',
   },
   value: {
-    fontSize: 15,
+    ...typography.body,
+    color: colors.ink,
     alignSelf: 'flex-start',
   },
   reference: {
-    fontSize: 12,
-    color: '#777',
+    ...typography.caption,
+    color: colors.inkFaint,
     alignSelf: 'flex-start',
   },
   disclaimer: {
-    fontSize: 12,
-    color: '#8a5a00',
-    backgroundColor: '#fff4e5',
-    borderColor: '#d9822b',
+    ...typography.caption,
+    color: colors.warning,
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 16,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    marginTop: spacing.lg,
   },
   actions: {
-    gap: 12,
-  },
-  primary: {
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1f6feb',
-    borderRadius: 8,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    gap: spacing.md,
   },
   unavailable: {
-    fontSize: 14,
-    color: '#666',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   status: {
-    fontSize: 13,
-    color: '#444',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   postSection: {
-    gap: 8,
+    gap: spacing.sm,
+  },
+  postSectionLabel: {
+    ...typography.label,
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
   },
   postHint: {
-    fontSize: 13,
-    color: '#666',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   postInput: {
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radii.sm,
+    padding: spacing.md,
     minHeight: 100,
-    fontSize: 14,
+    ...typography.caption,
+    color: colors.ink,
+    backgroundColor: colors.surface,
     textAlignVertical: 'top',
   },
 });

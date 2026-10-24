@@ -5,18 +5,20 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LevelId } from '../../domain/content/catalog.types';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import {
+  colors,
+  MIN_TOUCH_TARGET,
+  radii,
+  spacing,
+  typography,
+} from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLevel, findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -30,12 +32,13 @@ export function MasteryScreen({ route, navigation }: Props) {
   const [showGuidance, setShowGuidance] = useState(false);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading mastery check…" />;
+    return <Screen status="loading" loadingLabel="Loading mastery check…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the mastery check.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the mastery check.'}
         onRetry={reload}
       />
     );
@@ -45,8 +48,9 @@ export function MasteryScreen({ route, navigation }: Props) {
   const level = track ? findLevel(track, levelId) : null;
   if (track === null || level === null) {
     return (
-      <ErrorState
-        message="Mastery check not found."
+      <Screen
+        status="error"
+        errorMessage="Mastery check not found."
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -81,7 +85,7 @@ export function MasteryScreen({ route, navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -120,77 +124,60 @@ export function MasteryScreen({ route, navigation }: Props) {
         </Text>
       ) : null}
 
-      <Pressable
-        style={[styles.primary, !allAnswered && styles.primaryDisabled]}
-        onPress={submit}
-        accessibilityRole="button"
+      <AppButton
+        label="Submit"
         accessibilityLabel="Submit mastery check"
-        accessibilityState={{ disabled: !allAnswered }}
-      >
-        <Text style={styles.primaryText}>Submit</Text>
-      </Pressable>
-    </ScrollView>
+        disabled={!allAnswered}
+        style={styles.cta}
+        onPress={submit}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 14,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   rule: {
-    fontSize: 13,
-    color: '#666',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   question: {
-    gap: 8,
+    gap: spacing.sm,
   },
   prompt: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
   option: {
-    minHeight: 48,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
   },
   optionSelected: {
-    borderColor: '#1f6feb',
-    backgroundColor: '#eef4ff',
+    borderColor: colors.accent,
+    backgroundColor: colors.accentSoft,
   },
   optionText: {
-    fontSize: 15,
+    ...typography.body,
+    color: colors.ink,
   },
   optionTextSelected: {
-    color: '#1f6feb',
+    color: colors.accent,
     fontWeight: '600',
   },
   guidance: {
-    fontSize: 14,
-    color: '#b00020',
+    ...typography.body,
+    color: colors.danger,
   },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryDisabled: {
-    backgroundColor: '#9bbcf0',
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.sm,
   },
 });
 

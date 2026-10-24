@@ -7,17 +7,12 @@
 // screen renders the honest +50 XP line (first pass only), a badge line, and
 // per-question coaching from the returned pre-write priors (never live provider
 // state). It no longer recomputes completion events locally — badgeEarned is
-// the single source of the level-complete moment.
+// the single source of the level-complete moment. Phase 7: the completion line
+// uses a restrained, reduce-motion-respecting Celebration.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import {
   gradeMastery,
@@ -31,8 +26,11 @@ import {
 import { LevelId } from '../../domain/content/catalog.types';
 import { RewardOutcome } from '../../domain/rewards';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
+import { Celebration } from '../components/Celebration';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLevel, findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -94,20 +92,22 @@ export function MasteryResultScreen({ route, navigation }: Props) {
   }, [status, track, level, result]);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading result…" />;
+    return <Screen status="loading" loadingLabel="Loading result…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the result.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the result.'}
         onRetry={reload}
       />
     );
   }
   if (track === null || level === null || result === null) {
     return (
-      <ErrorState
-        message="Mastery result not found."
+      <Screen
+        status="error"
+        errorMessage="Mastery result not found."
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -117,7 +117,7 @@ export function MasteryResultScreen({ route, navigation }: Props) {
   const questions = level.mastery.questions;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -162,7 +162,7 @@ export function MasteryResultScreen({ route, navigation }: Props) {
       {saveStatus === 'saving' ? (
         <Text style={styles.saving}>Saving your result…</Text>
       ) : saveStatus === 'saved' && outcome !== null ? (
-        <View>
+        <View style={styles.rewardBlock}>
           <Text style={styles.saved}>Result saved.</Text>
           {result.passed ? (
             outcome.alreadyAwarded ? (
@@ -180,27 +180,23 @@ export function MasteryResultScreen({ route, navigation }: Props) {
             </Text>
           ) : null}
           {badgeEarned !== null ? (
-            <View>
-              <Text style={styles.levelComplete}>
+            <View style={styles.rewardBlock}>
+              <Text style={styles.badgeLine}>
                 You earned the {level.title} badge.
               </Text>
-              <Text style={styles.levelComplete}>
-                You completed the {level.title} level.
-              </Text>
+              <Celebration message={`You completed the ${level.title} level.`} />
             </View>
           ) : null}
         </View>
       ) : saveStatus === 'failed' ? (
         <View style={styles.failRow}>
           <Text style={styles.failed}>Couldn&apos;t save your result.</Text>
-          <Pressable
+          <AppButton
+            label="Retry save"
+            accessibilityLabel="Retry saving your result"
             style={styles.retrySave}
             onPress={() => void save()}
-            accessibilityRole="button"
-            accessibilityLabel="Retry saving your result"
-          >
-            <Text style={styles.retrySaveText}>Retry save</Text>
-          </Pressable>
+          />
         </View>
       ) : null}
 
@@ -209,7 +205,10 @@ export function MasteryResultScreen({ route, navigation }: Props) {
         already completed.
       </Text>
 
-      <Pressable
+      <AppButton
+        label="Retry"
+        variant="secondary"
+        accessibilityLabel="Retry the mastery check"
         style={styles.secondary}
         onPress={() =>
           navigation.navigate('Mastery', {
@@ -217,145 +216,100 @@ export function MasteryResultScreen({ route, navigation }: Props) {
             levelId: level.id as LevelId,
           })
         }
-        accessibilityRole="button"
-        accessibilityLabel="Retry the mastery check"
-      >
-        <Text style={styles.secondaryText}>Retry</Text>
-      </Pressable>
+      />
 
-      <Pressable
-        style={styles.primary}
-        onPress={() => navigation.navigate('Home')}
-        accessibilityRole="button"
+      <AppButton
+        label="Done"
         accessibilityLabel="Back to home"
-      >
-        <Text style={styles.primaryText}>Done</Text>
-      </Pressable>
-    </ScrollView>
+        style={styles.cta}
+        onPress={() => navigation.navigate('Home')}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   score: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   verdict: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.bodyStrong,
   },
   pass: {
-    color: '#0a7d28',
+    color: colors.success,
   },
   fail: {
-    color: '#b00020',
+    color: colors.danger,
   },
   row: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     gap: 2,
   },
   rowText: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
   coachText: {
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.body,
+    color: colors.ink,
   },
   coachMuted: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 19,
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   saving: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
   },
   saved: {
-    fontSize: 14,
-    color: '#0a7d28',
-    marginTop: 8,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.success,
+    marginTop: spacing.sm,
   },
   xp: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '600',
-    marginTop: 2,
+    ...typography.bodyStrong,
+    color: colors.success,
   },
   streak: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '600',
-    marginTop: 2,
+    ...typography.bodyStrong,
+    color: colors.success,
   },
-  levelComplete: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '700',
-    marginTop: 4,
+  rewardBlock: {
+    gap: spacing.xs,
+  },
+  badgeLine: {
+    ...typography.bodyStrong,
+    color: colors.success,
   },
   failRow: {
-    marginTop: 8,
-    gap: 8,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   failed: {
-    fontSize: 14,
-    color: '#b00020',
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.danger,
   },
   retrySave: {
-    minHeight: 44,
     alignSelf: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#1f6feb',
-    borderRadius: 8,
-  },
-  retrySaveText: {
-    color: '#fff',
-    fontWeight: '600',
+    minWidth: 120,
+    borderRadius: radii.sm,
   },
   note: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
   },
   secondary: {
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: '#1f6feb',
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
-  secondaryText: {
-    fontSize: 16,
-    color: '#1f6feb',
-    fontWeight: '600',
-  },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.sm,
   },
 });
 

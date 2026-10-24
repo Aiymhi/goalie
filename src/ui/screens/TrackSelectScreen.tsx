@@ -4,16 +4,11 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 
 import { useProgression } from '../context/ProgressionProvider';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrackSelect'>;
@@ -25,12 +20,13 @@ export function TrackSelectScreen({ navigation }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading tracks…" />;
+    return <Screen status="loading" loadingLabel="Loading tracks…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the course catalog.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the course catalog.'}
         onRetry={reload}
       />
     );
@@ -50,7 +46,7 @@ export function TrackSelectScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <Text style={styles.title}>Pick a track to start learning</Text>
 
       <Text style={styles.label} nativeID="displayNameLabel">
@@ -61,6 +57,7 @@ export function TrackSelectScreen({ navigation }: Props) {
         value={name}
         onChangeText={setName}
         placeholder="e.g. Ada"
+        placeholderTextColor={colors.inkFaint}
         accessibilityLabel="Your display name, optional"
         accessibilityLabelledBy="displayNameLabel"
         autoCapitalize="words"
@@ -83,54 +80,52 @@ export function TrackSelectScreen({ navigation }: Props) {
       ))}
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 16,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.label,
+    color: colors.ink,
   },
   input: {
     minHeight: 48,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+    color: colors.ink,
+    backgroundColor: colors.surface,
   },
   card: {
-    borderColor: '#ddd',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 16,
-    gap: 6,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.xs,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.heading,
+    color: colors.ink,
   },
   cardDesc: {
-    fontSize: 14,
-    color: '#444',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   current: {
-    fontSize: 12,
-    color: '#1f6feb',
-    fontWeight: '600',
+    ...typography.label,
+    color: colors.accent,
   },
   saveError: {
-    color: '#b00020',
-    fontSize: 14,
+    ...typography.caption,
+    color: colors.danger,
   },
 });
 

@@ -4,19 +4,15 @@
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { StyleSheet, Text, TextInput } from 'react-native';
 
 import { MAX_PRACTICE_TEXT } from '../../domain/coaching';
 import { LevelId } from '../../domain/content/catalog.types';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLesson, findLevel, findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -29,12 +25,13 @@ export function PracticeScreen({ route, navigation }: Props) {
   const [revealed, setRevealed] = useState(false);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading practice…" />;
+    return <Screen status="loading" loadingLabel="Loading practice…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load practice.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load practice.'}
         onRetry={reload}
       />
     );
@@ -45,8 +42,9 @@ export function PracticeScreen({ route, navigation }: Props) {
   const lesson = level ? findLesson(level, lessonId) : null;
   if (track === null || level === null || lesson === null) {
     return (
-      <ErrorState
-        message="Practice not found."
+      <Screen
+        status="error"
+        errorMessage="Practice not found."
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -54,7 +52,7 @@ export function PracticeScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -67,6 +65,7 @@ export function PracticeScreen({ route, navigation }: Props) {
         value={draft}
         onChangeText={setDraft}
         placeholder="Write your answer here"
+        placeholderTextColor={colors.inkFaint}
         accessibilityLabel="Your practice answer"
         multiline
       />
@@ -80,18 +79,18 @@ export function PracticeScreen({ route, navigation }: Props) {
           <Text style={styles.body}>{lesson.practice.answer}</Text>
         </>
       ) : (
-        <Pressable
-          style={styles.secondary}
-          onPress={() => setRevealed(true)}
-          accessibilityRole="button"
+        <AppButton
+          label="Reveal answer"
+          variant="secondary"
           accessibilityLabel="Reveal the suggested answer"
-        >
-          <Text style={styles.secondaryText}>Reveal answer</Text>
-        </Pressable>
+          onPress={() => setRevealed(true)}
+        />
       )}
 
-      <Pressable
-        style={styles.primary}
+      <AppButton
+        label="Continue"
+        accessibilityLabel="See the explanation and continue"
+        style={styles.cta}
         onPress={() =>
           navigation.navigate('Result', {
             trackId: track.id,
@@ -103,76 +102,47 @@ export function PracticeScreen({ route, navigation }: Props) {
             practiceAnswer: draft.trim().slice(0, MAX_PRACTICE_TEXT),
           })
         }
-        accessibilityRole="button"
-        accessibilityLabel="See the explanation and continue"
-      >
-        <Text style={styles.primaryText}>Continue</Text>
-      </Pressable>
-    </ScrollView>
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   prompt: {
-    fontSize: 16,
-    lineHeight: 22,
+    ...typography.body,
+    color: colors.ink,
   },
   input: {
     minHeight: 96,
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    ...typography.body,
+    color: colors.ink,
+    backgroundColor: colors.surface,
     textAlignVertical: 'top',
   },
   note: {
-    fontSize: 12,
-    color: '#666',
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 8,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
+    textTransform: 'uppercase',
   },
   body: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
+    color: colors.ink,
   },
-  secondary: {
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: '#1f6feb',
-    borderWidth: 1,
-    borderRadius: 8,
-  },
-  secondaryText: {
-    fontSize: 16,
-    color: '#1f6feb',
-    fontWeight: '600',
-  },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.sm,
   },
 });
 

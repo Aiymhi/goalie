@@ -9,7 +9,6 @@ import { useState } from 'react';
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -18,6 +17,10 @@ import {
 } from 'react-native';
 
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
+import { Card } from '../components/Card';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { PersistedAiCoaching } from '../../persistence/store';
 import { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -110,26 +113,25 @@ export function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <Text style={styles.title}>Settings</Text>
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.cardLabel}>Display name</Text>
         <Text style={styles.cardValue}>{displayName ?? '—'}</Text>
         <Text style={styles.cardLabel}>Selected track</Text>
         <Text style={styles.cardValue}>{selectedTrackId ?? '—'}</Text>
-        <Pressable
+        <AppButton
+          label="Change track / name"
+          variant="secondary"
+          accessibilityLabel="Change track or display name"
           style={styles.secondary}
           onPress={() => navigation.navigate('TrackSelect')}
-          accessibilityRole="button"
-          accessibilityLabel="Change track or display name"
-        >
-          <Text style={styles.secondaryText}>Change track / name</Text>
-        </Pressable>
-      </View>
+        />
+      </Card>
 
       <Text style={styles.aiSectionLabel}>AI coaching (optional)</Text>
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.disclosure}>
           AI coaching is off by default. When you turn it on and set an endpoint,
           the app sends only this lesson&apos;s id, the practice prompt, the
@@ -187,101 +189,84 @@ export function SettingsScreen({ navigation }: Props) {
           onChangeText={setEndpointDraft}
           onBlur={onEndpointBlur}
           placeholder="https://your-server.example/coach/explain"
+          placeholderTextColor={colors.inkFaint}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
           accessibilityLabel="AI coaching endpoint URL"
         />
         {aiError ? <Text style={styles.error}>{aiError}</Text> : null}
-      </View>
+      </Card>
 
       <Text style={styles.sectionLabel}>Danger zone</Text>
-      <Pressable
-        style={[styles.destructive, deleting && styles.destructiveDisabled]}
-        onPress={confirmDelete}
+      <AppButton
+        label={deleting ? 'Deleting…' : 'Delete all local data'}
+        variant="danger"
         disabled={deleting}
-        accessibilityRole="button"
         accessibilityLabel="Delete all local data"
-        accessibilityState={{ disabled: deleting }}
-      >
-        <Text style={styles.destructiveText}>
-          {deleting ? 'Deleting…' : 'Delete all local data'}
-        </Text>
-      </Pressable>
+        onPress={confirmDelete}
+      />
       {deleteError ? <Text style={styles.error}>{deleteError}</Text> : null}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 12,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  card: {
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 16,
-    gap: 4,
+    ...typography.title,
+    color: colors.ink,
   },
   cardLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
     textTransform: 'uppercase',
   },
   cardValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#b00020',
-    marginTop: 16,
+    ...typography.label,
+    color: colors.danger,
+    marginTop: spacing.lg,
   },
   aiSectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
+    ...typography.label,
+    color: colors.ink,
+    marginTop: spacing.lg,
   },
   disclosure: {
-    fontSize: 13,
-    color: '#444',
-    lineHeight: 19,
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   ackRow: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 44,
-    gap: 10,
-    marginTop: 8,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#1f6feb',
+    borderColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#1f6feb',
+    backgroundColor: colors.accent,
   },
   checkboxMark: {
-    color: '#fff',
+    color: colors.onAccent,
     fontSize: 15,
     fontWeight: '700',
   },
   ackText: {
-    fontSize: 14,
+    ...typography.caption,
+    color: colors.ink,
     flexShrink: 1,
   },
   toggleRow: {
@@ -289,49 +274,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 44,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   input: {
-    borderColor: '#ccc',
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginTop: 6,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    ...typography.body,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+    marginTop: spacing.xs,
   },
   secondary: {
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: '#1f6feb',
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  secondaryText: {
-    fontSize: 16,
-    color: '#1f6feb',
-    fontWeight: '600',
-  },
-  destructive: {
-    minHeight: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#b00020',
-    borderRadius: 10,
-  },
-  destructiveDisabled: {
-    backgroundColor: '#d98b98',
-  },
-  destructiveText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    marginTop: spacing.md,
   },
   error: {
-    color: '#b00020',
-    fontSize: 14,
+    ...typography.caption,
+    color: colors.danger,
   },
 });
 

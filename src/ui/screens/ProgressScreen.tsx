@@ -4,17 +4,13 @@
 // badges are earned yet.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { viewLevelProgress } from '../../domain/progression';
 import { useProgression } from '../context/ProgressionProvider';
-import { EmptyState, ErrorState, LoadingState } from '../components/ScreenState';
+import { AppButton } from '../components/AppButton';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findTrack } from './catalogLookup';
 
@@ -32,12 +28,13 @@ export function ProgressScreen({ navigation }: Props) {
   } = useProgression();
 
   if (status === 'loading') {
-    return <LoadingState label="Loading progress…" />;
+    return <Screen status="loading" loadingLabel="Loading progress…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load your progress.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load your progress.'}
         onRetry={reload}
       />
     );
@@ -46,18 +43,15 @@ export function ProgressScreen({ navigation }: Props) {
   const track = selectedTrackId ? findTrack(catalog, selectedTrackId) : null;
   if (track === null) {
     return (
-      <EmptyState
-        title="No track selected"
-        detail="Choose a track to start earning badges."
-        action={
-          <Pressable
-            style={styles.primary}
+      <Screen
+        status="empty"
+        emptyTitle="No track selected"
+        emptyDetail="Choose a track to start earning badges."
+        emptyAction={
+          <AppButton
+            label="Choose a track"
             onPress={() => navigation.navigate('TrackSelect')}
-            accessibilityRole="button"
-            accessibilityLabel="Choose a track"
-          >
-            <Text style={styles.primaryText}>Choose a track</Text>
-          </Pressable>
+          />
         }
       />
     );
@@ -82,15 +76,16 @@ export function ProgressScreen({ navigation }: Props) {
 
   if (masteredLevels.length === 0 && !anyAttempt && !hasEffort) {
     return (
-      <EmptyState
-        title="No badges yet"
-        detail="Complete a level to earn one."
+      <Screen
+        status="empty"
+        emptyTitle="No badges yet"
+        emptyDetail="Complete a level to earn one."
       />
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       <Text style={styles.title}>{track.title} progress</Text>
 
       {/* Effort (motivation) — explicitly separated from mastery so a large XP
@@ -144,78 +139,61 @@ export function ProgressScreen({ navigation }: Props) {
         );
       })}
 
-      <Pressable
-        style={styles.primary}
+      <AppButton
+        label="View certificate preview"
+        style={styles.cta}
         onPress={() => navigation.navigate('Certificate', { trackId: track.id })}
-        accessibilityRole="button"
-        accessibilityLabel="View certificate preview"
-      >
-        <Text style={styles.primaryText}>View certificate preview</Text>
-      </Pressable>
-    </ScrollView>
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 12,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.md,
+    textTransform: 'uppercase',
   },
   muted: {
-    fontSize: 14,
-    color: '#666',
+    ...typography.body,
+    color: colors.inkMuted,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 8,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
   },
   badge: {
-    backgroundColor: '#e7f6ec',
-    borderColor: '#0a7d28',
+    backgroundColor: colors.successSoft,
+    borderColor: colors.success,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radii.sm,
+    padding: spacing.md,
   },
   badgeText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0a7d28',
+    ...typography.bodyStrong,
+    color: colors.success,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   rowText: {
-    fontSize: 15,
+    ...typography.body,
+    color: colors.ink,
   },
   rowValue: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.ink,
   },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.lg,
   },
 });
 

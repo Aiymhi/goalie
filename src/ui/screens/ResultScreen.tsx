@@ -9,17 +9,12 @@
 // screen renders honest XP/streak/badge copy from the outcome and practice
 // coaching from the returned pre-write prior (never live provider state). It no
 // longer recomputes completion events locally — badgeEarned is the single
-// source of the "You completed the <level> level." moment.
+// source of the "You completed the <level> level." moment. Phase 7: a real
+// level completion shows a restrained, reduce-motion-respecting Celebration.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { fetchAiHint } from '../../ai/coachingClient';
 import {
@@ -30,8 +25,11 @@ import {
 import { LevelId } from '../../domain/content/catalog.types';
 import { RewardOutcome } from '../../domain/rewards';
 import { useProgression } from '../context/ProgressionProvider';
+import { AppButton } from '../components/AppButton';
+import { Celebration } from '../components/Celebration';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
-import { ErrorState, LoadingState } from '../components/ScreenState';
+import { Screen } from '../components/Screen';
+import { colors, radii, spacing, typography } from '../theme';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { findLesson, findLevel, findTrack, isFinanceTrack } from './catalogLookup';
 
@@ -143,20 +141,22 @@ export function ResultScreen({ route, navigation }: Props) {
   ]);
 
   if (status === 'loading') {
-    return <LoadingState label="Loading result…" />;
+    return <Screen status="loading" loadingLabel="Loading result…" />;
   }
   if (status === 'error' || catalog === null) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Could not load the result.'}
+      <Screen
+        status="error"
+        errorMessage={error?.message ?? 'Could not load the result.'}
         onRetry={reload}
       />
     );
   }
   if (track === null || level === null || lesson === null) {
     return (
-      <ErrorState
-        message="Result not found."
+      <Screen
+        status="error"
+        errorMessage="Result not found."
         onRetry={() => navigation.goBack()}
         retryLabel="Go back"
       />
@@ -176,7 +176,7 @@ export function ResultScreen({ route, navigation }: Props) {
       : localCoaching;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <Screen>
       {isFinanceTrack(track.id) && track.disclaimer ? (
         <FinanceDisclaimerBanner text={track.disclaimer} />
       ) : null}
@@ -213,7 +213,7 @@ export function ResultScreen({ route, navigation }: Props) {
       {saveStatus === 'saving' ? (
         <Text style={styles.saving}>Saving your progress…</Text>
       ) : saveStatus === 'saved' && outcome !== null ? (
-        <View>
+        <View style={styles.rewardBlock}>
           <Text style={styles.saved}>Progress saved.</Text>
           {outcome.alreadyAwarded ? (
             <Text style={styles.xp}>
@@ -229,9 +229,7 @@ export function ResultScreen({ route, navigation }: Props) {
             </Text>
           ) : null}
           {badgeEarned !== null ? (
-            <Text style={styles.levelComplete}>
-              You completed the {level.title} level.
-            </Text>
+            <Celebration message={`You completed the ${level.title} level.`} />
           ) : null}
         </View>
       ) : saveStatus === 'failed' ? (
@@ -239,119 +237,85 @@ export function ResultScreen({ route, navigation }: Props) {
           <Text style={styles.failed}>
             Couldn&apos;t save your progress.
           </Text>
-          <Pressable
+          <AppButton
+            label="Retry"
+            accessibilityLabel="Retry saving your progress"
             style={styles.retry}
             onPress={() => void markComplete()}
-            accessibilityRole="button"
-            accessibilityLabel="Retry saving your progress"
-          >
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+          />
         </View>
       ) : null}
 
-      <Pressable
-        style={styles.primary}
-        onPress={() => navigation.navigate('Home')}
-        accessibilityRole="button"
+      <AppButton
+        label="Done"
         accessibilityLabel="Back to home"
-      >
-        <Text style={styles.primaryText}>Done</Text>
-      </Pressable>
-    </ScrollView>
+        style={styles.cta}
+        onPress={() => navigation.navigate('Home')}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    gap: 10,
-  },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
+    color: colors.ink,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 8,
+    ...typography.label,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
+    textTransform: 'uppercase',
   },
   body: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
+    color: colors.ink,
   },
   muted: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 20,
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   coachBlock: {
-    gap: 4,
-    marginTop: 8,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  rewardBlock: {
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
   saving: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: spacing.sm,
   },
   saved: {
-    fontSize: 14,
-    color: '#0a7d28',
-    marginTop: 8,
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.success,
+    marginTop: spacing.sm,
   },
   xp: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '600',
-    marginTop: 2,
+    ...typography.bodyStrong,
+    color: colors.success,
   },
   streak: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  levelComplete: {
-    fontSize: 15,
-    color: '#0a7d28',
-    fontWeight: '700',
-    marginTop: 4,
+    ...typography.bodyStrong,
+    color: colors.success,
   },
   failRow: {
-    marginTop: 8,
-    gap: 8,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   failed: {
-    fontSize: 14,
-    color: '#b00020',
-    fontWeight: '600',
+    ...typography.bodyStrong,
+    color: colors.danger,
   },
   retry: {
-    minHeight: 44,
     alignSelf: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#1f6feb',
-    borderRadius: 8,
+    minWidth: 120,
+    borderRadius: radii.sm,
   },
-  retryText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  primary: {
-    minHeight: 56,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+  cta: {
+    marginTop: spacing.lg,
   },
 });
 
