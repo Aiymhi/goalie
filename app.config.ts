@@ -13,9 +13,7 @@ const config: ExpoConfig = {
   plugins: [
     'expo-dev-client',
     ['expo-build-properties', { ios: { deploymentTarget: '16.0' } }],
-    // TODO(FEAT-003): add './modules/goalie-focus/plugin/withGoalieFocus' here
-    // (pass APP_GROUP_ID). Do not reference it until the file exists, or
-    // typecheck/prebuild will fail.
+    ['./modules/goalie-focus/app.plugin.js', { appGroupId: APP_GROUP_ID }],
   ],
 };
 

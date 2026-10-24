@@ -1,0 +1,7 @@
+{
+  "name": "goalie-focus",
+  "version": "1.0.0",
+  "description": "Local Expo native module for Goalie's real iOS focus-blocking (Family Controls / ManagedSettings / DeviceActivity).",
+  "main": "index.ts",
+  "private": true
+}
