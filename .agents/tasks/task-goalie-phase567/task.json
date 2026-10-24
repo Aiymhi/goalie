@@ -1,7 +1,7 @@
 {
   "task_id": "task-goalie-phase567",
   "task_description": "Build Goalie Phases 5, 6, and 7 as one hackathon batch. Phase 5: a real voluntary-focus session flow (pick apps via FamilyActivityPicker, choose duration in [60s,86400s], explicit disclosure, explicit Start) layered on the existing Phase 1 native module (schedule-before-shield invariant), with an always-visible emergency release, native-authoritative reconciliation via getActiveSession(), honest 'focus protection unavailable' on web/Android/Expo Go/simulator/unauthorized, and a pure clock-injected session domain tested without a device. Phase 6: generate a polished one-page certificate PDF ONLY for a truly-complete level (both lessons + mastery passed), derived entirely from real completion data including a newly-recorded per-level completion timestamp (no fabricated now()), a deterministic local reference id (no verification URL, no auto-posting), PDF preview/save/share-sheet, and an editable copyable social post, using exact SDK 54 pins (expo-print@~15.0.8, expo-sharing@~14.0.8, expo-file-system@~19.0.24). Phase 7: apply an original theme + reusable components across the existing screens, accessibility on the main journey (labels/roles, large touch targets, reduce motion, contrast, focus order, small-width layout), with a lightweight accessibility test. Verification: npx tsc --noEmit, npm run lint, npx jest, node scripts/validate-catalog.mjs.",
-  "status": "pending",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
   "blocked_reason": null
 }
