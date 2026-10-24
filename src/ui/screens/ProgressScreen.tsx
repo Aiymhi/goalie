@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-import { isLevelComplete, viewLevelProgress } from '../../domain/progression';
+import { viewLevelProgress } from '../../domain/progression';
 import { useProgression } from '../context/ProgressionProvider';
 import { EmptyState, ErrorState, LoadingState } from '../components/ScreenState';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -21,8 +21,15 @@ import { findTrack } from './catalogLookup';
 type Props = NativeStackScreenProps<RootStackParamList, 'Progress'>;
 
 export function ProgressScreen({ navigation }: Props) {
-  const { status, error, catalog, progression, selectedTrackId, reload } =
-    useProgression();
+  const {
+    status,
+    error,
+    catalog,
+    progression,
+    selectedTrackId,
+    viewRewards,
+    reload,
+  } = useProgression();
 
   if (status === 'loading') {
     return <LoadingState label="Loading progress…" />;
@@ -56,8 +63,11 @@ export function ProgressScreen({ navigation }: Props) {
     );
   }
 
-  const earnedBadges = track.levels.filter((level) =>
-    isLevelComplete(progression, level, track.id),
+  // Badges render ONLY when the rewards ledger says the badge is earned, which
+  // is tied to real completeness (both lessons + mastery). hasBadge mirrors
+  // isLevelComplete's false->true edge via the append-only earnedBadges set.
+  const masteredLevels = track.levels.filter((level) =>
+    viewRewards.hasBadge(track.id, level.id),
   );
   const anyAttempt = track.levels.some((level) => {
     const view = viewLevelProgress(progression, level, track.id);
@@ -65,8 +75,12 @@ export function ProgressScreen({ navigation }: Props) {
       view.completedLessons > 0 || view.bestCorrectCount > 0 || view.masteryPassed
     );
   });
+  // Render the screen when there is ANY signal to show honestly — effort (XP /
+  // streak) OR mastery OR any attempt — so a high-XP / no-mastery learner still
+  // sees their effort rather than an empty state.
+  const hasEffort = viewRewards.totalXp > 0 || viewRewards.streakCount > 0;
 
-  if (earnedBadges.length === 0 && !anyAttempt) {
+  if (masteredLevels.length === 0 && !anyAttempt && !hasEffort) {
     return (
       <EmptyState
         title="No badges yet"
@@ -79,12 +93,39 @@ export function ProgressScreen({ navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{track.title} progress</Text>
 
-      <Text style={styles.sectionLabel}>Badges</Text>
-      {earnedBadges.length === 0 ? (
-        <Text style={styles.muted}>No badges yet — complete a level to earn one.</Text>
+      {/* Effort (motivation) — explicitly separated from mastery so a large XP
+          total is never presented as competence. */}
+      <Text style={styles.sectionLabel}>Your effort</Text>
+      <View style={styles.row}>
+        <Text style={styles.rowText}>Total XP</Text>
+        <Text style={styles.rowValue}>{viewRewards.totalXp} XP</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.rowText}>Current streak</Text>
+        <Text style={styles.rowValue}>
+          {viewRewards.streakCount}{' '}
+          {viewRewards.streakCount === 1 ? 'day' : 'days'}
+        </Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.rowText}>Badges earned</Text>
+        <Text style={styles.rowValue}>{viewRewards.earnedBadgeCount}</Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      <Text style={styles.sectionLabel}>Levels mastered</Text>
+      {masteredLevels.length === 0 ? (
+        <Text style={styles.muted}>
+          0 levels mastered — complete a level to earn a badge.
+        </Text>
       ) : (
-        earnedBadges.map((level) => (
-          <View key={level.id} style={styles.badge} accessibilityLabel={`Badge: ${level.title} complete`}>
+        masteredLevels.map((level) => (
+          <View
+            key={level.id}
+            style={styles.badge}
+            accessibilityLabel={`Badge: ${level.title} complete`}
+          >
             <Text style={styles.badgeText}>{level.title} complete</Text>
           </View>
         ))
@@ -133,6 +174,11 @@ const styles = StyleSheet.create({
   muted: {
     fontSize: 14,
     color: '#666',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 8,
   },
   badge: {
     backgroundColor: '#e7f6ec',

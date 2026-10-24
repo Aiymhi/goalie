@@ -12,6 +12,7 @@ import {
   TextInput,
 } from 'react-native';
 
+import { MAX_PRACTICE_TEXT } from '../../domain/coaching';
 import { LevelId } from '../../domain/content/catalog.types';
 import { useProgression } from '../context/ProgressionProvider';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
@@ -96,6 +97,10 @@ export function PracticeScreen({ route, navigation }: Props) {
             trackId: track.id,
             levelId: level.id as LevelId,
             lessonId: lesson.id,
+            // Always forward the draft (trimmed + bounded) so practice coaching
+            // and hadText are grounded in what was actually written. It is
+            // display/coaching-only and never persisted as raw text.
+            practiceAnswer: draft.trim().slice(0, MAX_PRACTICE_TEXT),
           })
         }
         accessibilityRole="button"

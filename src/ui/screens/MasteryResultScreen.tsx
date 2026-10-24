@@ -1,11 +1,16 @@
 // Grades the submitted answers with gradeMastery, shows correctCount/5,
-// per-question correctness, and pass/fail against the published rule (>= 4).
-// Records the result via the context (non-regression invariant applies), then
-// derives completion events (level-complete moment). Retry returns to Mastery
-// and never lowers earned progress. Write-failure handling as in Result.
+// per-question correctness + coaching, and pass/fail against the published rule
+// (>= 4). Records the result via the context (non-regression invariant applies).
+//
+// Phases 3+4: the recordMasteryResult wrapper now returns the reward outcome,
+// the newly-earned badge (if any), and the PRE-WRITE per-question priors. This
+// screen renders the honest +50 XP line (first pass only), a badge line, and
+// per-question coaching from the returned pre-write priors (never live provider
+// state). It no longer recomputes completion events locally — badgeEarned is
+// the single source of the level-complete moment.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -19,12 +24,12 @@ import {
   MASTERY_PASS_THRESHOLD,
   MasteryResult,
 } from '../../domain/assessment';
-import { LevelId } from '../../domain/content/catalog.types';
 import {
-  isLevelComplete,
-  recordMasteryResult as recordMasteryResultPure,
-} from '../../domain/progression';
-import { deriveCompletionEvents } from '../../domain/rewards';
+  coachMasteryQuestion,
+  PriorQuestionAttempt,
+} from '../../domain/coaching';
+import { LevelId } from '../../domain/content/catalog.types';
+import { RewardOutcome } from '../../domain/rewards';
 import { useProgression } from '../context/ProgressionProvider';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
 import { ErrorState, LoadingState } from '../components/ScreenState';
@@ -37,10 +42,17 @@ type SaveStatus = 'saving' | 'saved' | 'failed';
 
 export function MasteryResultScreen({ route, navigation }: Props) {
   const { trackId, levelId, answers } = route.params;
-  const { status, error, catalog, progression, recordMasteryResult, reload } =
+  const { status, error, catalog, recordMasteryResult, reload } =
     useProgression();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saving');
-  const [justCompletedLevel, setJustCompletedLevel] = useState(false);
+  const [outcome, setOutcome] = useState<RewardOutcome | null>(null);
+  const [badgeEarned, setBadgeEarned] = useState<string | null>(null);
+  const [priorByQuestionId, setPriorByQuestionId] = useState<
+    Record<string, PriorQuestionAttempt | null>
+  >({});
+  // Guard so the on-arrival record write runs exactly once per mount (see the
+  // ResultScreen note). The Retry-save button calls save() directly.
+  const didRun = useRef(false);
 
   const track = catalog ? findTrack(catalog, trackId) : null;
   const level = track ? findLevel(track, levelId) : null;
@@ -56,30 +68,30 @@ export function MasteryResultScreen({ route, navigation }: Props) {
       return;
     }
     setSaveStatus('saving');
-    const before = progression;
-    const after = recordMasteryResultPure(
-      before,
-      track.id,
-      level.id as LevelId,
-      result,
-    );
     try {
-      await recordMasteryResult(track.id, level.id as LevelId, result);
-      const events = deriveCompletionEvents(before, after, level, track.id);
-      setJustCompletedLevel(
-        events.length > 0 || isLevelComplete(after, level, track.id),
-      );
+      const r = await recordMasteryResult(track.id, level.id as LevelId, result);
+      setOutcome(r.outcome);
+      setBadgeEarned(r.badgeEarned);
+      setPriorByQuestionId(r.priorByQuestionId);
       setSaveStatus('saved');
     } catch {
       setSaveStatus('failed');
     }
-    // progression intentionally excluded (captured once per arrival).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track, level, result, recordMasteryResult]);
 
   useEffect(() => {
+    if (didRun.current) {
+      return;
+    }
+    if (status !== 'ready' || !track || !level || !result) {
+      return;
+    }
+    didRun.current = true;
     void save();
-  }, [save]);
+    // save is intentionally excluded: it is recreated on every data change and
+    // we must run the write exactly once per arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, track, level, result]);
 
   if (status === 'loading') {
     return <LoadingState label="Loading result…" />;
@@ -102,6 +114,8 @@ export function MasteryResultScreen({ route, navigation }: Props) {
     );
   }
 
+  const questions = level.mastery.questions;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {isFinanceTrack(track.id) && track.disclaimer ? (
@@ -118,26 +132,65 @@ export function MasteryResultScreen({ route, navigation }: Props) {
           : `Not passed yet (needed ${MASTERY_PASS_THRESHOLD} of ${result.total})`}
       </Text>
 
-      {result.perQuestion.map((graded, i) => (
-        <View key={graded.questionId} style={styles.row}>
-          <Text style={styles.rowText}>
-            {i + 1}. {graded.correct ? 'Correct' : 'Incorrect'}
-          </Text>
-        </View>
-      ))}
+      {result.perQuestion.map((graded, i) => {
+        const question = questions[i];
+        const coaching = coachMasteryQuestion(
+          question,
+          graded,
+          priorByQuestionId[graded.questionId] ?? null,
+        );
+        return (
+          <View key={graded.questionId} style={styles.row}>
+            <Text style={styles.rowText}>
+              {i + 1}. {graded.correct ? 'Correct' : 'Incorrect'}
+            </Text>
+            <Text style={styles.coachText}>{coaching.strength}</Text>
+            <Text style={styles.coachText}>{coaching.improvement}</Text>
+            <Text style={styles.coachText}>{coaching.hint}</Text>
+            {coaching.comparison !== null ? (
+              <Text style={styles.coachMuted}>
+                {coaching.comparison.improved
+                  ? 'You improved: '
+                  : 'Compared to last time: '}
+                {coaching.comparison.difference}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
 
       {saveStatus === 'saving' ? (
         <Text style={styles.saving}>Saving your result…</Text>
-      ) : saveStatus === 'saved' ? (
+      ) : saveStatus === 'saved' && outcome !== null ? (
         <View>
           <Text style={styles.saved}>Result saved.</Text>
-          {justCompletedLevel ? (
-            <Text style={styles.levelComplete}>
-              You completed the {level.title} level.
+          {result.passed ? (
+            outcome.alreadyAwarded ? (
+              <Text style={styles.xp}>
+                You&apos;ve already earned XP for this level.
+              </Text>
+            ) : (
+              <Text style={styles.xp}>You earned {outcome.xpAwarded} XP.</Text>
+            )
+          ) : null}
+          {outcome.streakIncreased ? (
+            <Text style={styles.streak}>
+              Streak: {outcome.newStreakCount}{' '}
+              {outcome.newStreakCount === 1 ? 'day' : 'days'}.
             </Text>
           ) : null}
+          {badgeEarned !== null ? (
+            <View>
+              <Text style={styles.levelComplete}>
+                You earned the {level.title} badge.
+              </Text>
+              <Text style={styles.levelComplete}>
+                You completed the {level.title} level.
+              </Text>
+            </View>
+          ) : null}
         </View>
-      ) : (
+      ) : saveStatus === 'failed' ? (
         <View style={styles.failRow}>
           <Text style={styles.failed}>Couldn&apos;t save your result.</Text>
           <Pressable
@@ -149,10 +202,11 @@ export function MasteryResultScreen({ route, navigation }: Props) {
             <Text style={styles.retrySaveText}>Retry save</Text>
           </Pressable>
         </View>
-      )}
+      ) : null}
 
       <Text style={styles.note}>
-        Retrying never lowers your best score or a level you already completed.
+        Retrying never lowers your best score, your earned XP, or a level you
+        already completed.
       </Text>
 
       <Pressable
@@ -205,10 +259,21 @@ const styles = StyleSheet.create({
     color: '#b00020',
   },
   row: {
-    paddingVertical: 2,
+    paddingVertical: 4,
+    gap: 2,
   },
   rowText: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  coachText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  coachMuted: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 19,
   },
   saving: {
     fontSize: 14,
@@ -220,6 +285,18 @@ const styles = StyleSheet.create({
     color: '#0a7d28',
     marginTop: 8,
     fontWeight: '600',
+  },
+  xp: {
+    fontSize: 15,
+    color: '#0a7d28',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  streak: {
+    fontSize: 15,
+    color: '#0a7d28',
+    fontWeight: '600',
+    marginTop: 2,
   },
   levelComplete: {
     fontSize: 15,

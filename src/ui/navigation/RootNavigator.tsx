@@ -25,7 +25,16 @@ export type RootStackParamList = {
   CoursePath: { trackId: string };
   Lesson: { trackId: string; levelId: LevelId; lessonId: string };
   Practice: { trackId: string; levelId: LevelId; lessonId: string };
-  Result: { trackId: string; levelId: LevelId; lessonId: string };
+  // practiceAnswer: the learner's free-text practice draft, trimmed and bounded
+  // by PracticeScreen before forwarding. Display/coaching-only — never graded,
+  // never persisted as raw text (only hadText is stored). Optional so any other
+  // navigation path to Result (e.g. a deep link) legitimately omits it.
+  Result: {
+    trackId: string;
+    levelId: LevelId;
+    lessonId: string;
+    practiceAnswer?: string;
+  };
   Mastery: { trackId: string; levelId: LevelId };
   // answers: the selectedIndex per question, in question order, collected by
   // the Mastery screen (all five required before submit). MasteryResult grades

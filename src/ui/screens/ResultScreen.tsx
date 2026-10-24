@@ -3,11 +3,16 @@
 // single place a lesson flips to complete (completion == reaching Result,
 // an intentional choice given self-checked practice). The write is awaited;
 // on failure we show "couldn't save — retry" and do NOT claim completion.
-// After a successful write it derives completion events to surface a
-// level-complete moment.
+//
+// Phases 3+4: the completeLesson wrapper now returns the reward outcome, the
+// newly-earned badge (if any), and the PRE-WRITE prior practice attempt. This
+// screen renders honest XP/streak/badge copy from the outcome and practice
+// coaching from the returned pre-write prior (never live provider state). It no
+// longer recomputes completion events locally — badgeEarned is the single
+// source of the "You completed the <level> level." moment.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -16,12 +21,9 @@ import {
   View,
 } from 'react-native';
 
+import { coachPractice, PriorPracticeAttempt } from '../../domain/coaching';
 import { LevelId } from '../../domain/content/catalog.types';
-import {
-  completeLesson as completeLessonPure,
-  isLevelComplete,
-} from '../../domain/progression';
-import { deriveCompletionEvents } from '../../domain/rewards';
+import { RewardOutcome } from '../../domain/rewards';
 import { useProgression } from '../context/ProgressionProvider';
 import { FinanceDisclaimerBanner } from '../components/FinanceDisclaimerBanner';
 import { ErrorState, LoadingState } from '../components/ScreenState';
@@ -33,11 +35,19 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Result'>;
 type SaveStatus = 'saving' | 'saved' | 'failed';
 
 export function ResultScreen({ route, navigation }: Props) {
-  const { trackId, levelId, lessonId } = route.params;
-  const { status, error, catalog, progression, completeLesson, reload } =
-    useProgression();
+  const { trackId, levelId, lessonId, practiceAnswer } = route.params;
+  const { status, error, catalog, completeLesson, reload } = useProgression();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saving');
-  const [justCompletedLevel, setJustCompletedLevel] = useState(false);
+  const [outcome, setOutcome] = useState<RewardOutcome | null>(null);
+  const [badgeEarned, setBadgeEarned] = useState<string | null>(null);
+  const [priorPractice, setPriorPractice] =
+    useState<PriorPracticeAttempt | null>(null);
+  // Guard so the on-arrival completion write runs exactly once per mount. The
+  // completeLesson callback is recreated on every persisted data change; without
+  // this guard the effect would re-fire in a loop (completeLesson -> persist ->
+  // new data -> new callback -> effect). The Retry button calls markComplete
+  // directly, bypassing the guard.
+  const didRun = useRef(false);
 
   const track = catalog ? findTrack(catalog, trackId) : null;
   const level = track ? findLevel(track, levelId) : null;
@@ -48,28 +58,37 @@ export function ResultScreen({ route, navigation }: Props) {
       return;
     }
     setSaveStatus('saving');
-    // Compute the before/after around the same transition to honestly detect
-    // whether this completion just finished the level.
-    const before = progression;
-    const after = completeLessonPure(before, track.id, level.id as LevelId, lesson.id);
     try {
-      await completeLesson(track.id, level.id as LevelId, lesson.id);
-      const events = deriveCompletionEvents(before, after, level, track.id);
-      setJustCompletedLevel(
-        events.length > 0 || isLevelComplete(after, level, track.id),
+      const result = await completeLesson(
+        track.id,
+        level.id as LevelId,
+        lesson.id,
+        practiceAnswer,
       );
+      setOutcome(result.outcome);
+      setBadgeEarned(result.badgeEarned);
+      setPriorPractice(result.priorPracticeAttempt);
       setSaveStatus('saved');
     } catch {
       setSaveStatus('failed');
     }
-    // progression intentionally excluded: we capture it once per arrival so a
-    // provider state change from the write does not re-trigger this effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [track, level, lesson, completeLesson]);
+  }, [track, level, lesson, completeLesson, practiceAnswer]);
 
   useEffect(() => {
+    if (didRun.current) {
+      return;
+    }
+    // Only fire once the provider is ready and the route resolves; otherwise
+    // wait (the catalog loads asynchronously).
+    if (status !== 'ready' || !track || !level || !lesson) {
+      return;
+    }
+    didRun.current = true;
     void markComplete();
-  }, [markComplete]);
+    // markComplete is intentionally excluded: it is recreated on every data
+    // change and we must run the write exactly once per arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, track, level, lesson]);
 
   if (status === 'loading') {
     return <LoadingState label="Loading result…" />;
@@ -92,6 +111,12 @@ export function ResultScreen({ route, navigation }: Props) {
     );
   }
 
+  // Build practice coaching from the RETURNED pre-write prior (never the live
+  // provider attemptHistory, which already reflects this visit's write). The
+  // currentAnswerText is exactly what Practice forwarded, so coaching and
+  // hadText are grounded in the same value.
+  const coaching = coachPractice(lesson, practiceAnswer ?? '', priorPractice);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {isFinanceTrack(track.id) && track.disclaimer ? (
@@ -109,18 +134,49 @@ export function ResultScreen({ route, navigation }: Props) {
       <Text style={styles.sectionLabel}>Next step</Text>
       <Text style={styles.body}>{lesson.nextStep}</Text>
 
+      {saveStatus === 'saved' ? (
+        <View style={styles.coachBlock}>
+          <Text style={styles.sectionLabel}>Coaching</Text>
+          <Text style={styles.body}>{coaching.strength}</Text>
+          <Text style={styles.body}>{coaching.improvement}</Text>
+          <Text style={styles.body}>{coaching.hint}</Text>
+          {coaching.comparison !== null ? (
+            <View>
+              <Text style={styles.body}>{coaching.comparison.difference}</Text>
+              <Text style={styles.muted}>
+                Last time: {coaching.comparison.previousSummary}. This time:{' '}
+                {coaching.comparison.currentSummary}.
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       {saveStatus === 'saving' ? (
         <Text style={styles.saving}>Saving your progress…</Text>
-      ) : saveStatus === 'saved' ? (
+      ) : saveStatus === 'saved' && outcome !== null ? (
         <View>
           <Text style={styles.saved}>Progress saved.</Text>
-          {justCompletedLevel ? (
+          {outcome.alreadyAwarded ? (
+            <Text style={styles.xp}>
+              You&apos;ve already earned XP for this lesson.
+            </Text>
+          ) : (
+            <Text style={styles.xp}>You earned {outcome.xpAwarded} XP.</Text>
+          )}
+          {outcome.streakIncreased ? (
+            <Text style={styles.streak}>
+              Streak: {outcome.newStreakCount}{' '}
+              {outcome.newStreakCount === 1 ? 'day' : 'days'}.
+            </Text>
+          ) : null}
+          {badgeEarned !== null ? (
             <Text style={styles.levelComplete}>
               You completed the {level.title} level.
             </Text>
           ) : null}
         </View>
-      ) : (
+      ) : saveStatus === 'failed' ? (
         <View style={styles.failRow}>
           <Text style={styles.failed}>
             Couldn&apos;t save your progress.
@@ -134,7 +190,7 @@ export function ResultScreen({ route, navigation }: Props) {
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
-      )}
+      ) : null}
 
       <Pressable
         style={styles.primary}
@@ -167,6 +223,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  muted: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 20,
+  },
+  coachBlock: {
+    gap: 4,
+    marginTop: 8,
+  },
   saving: {
     fontSize: 14,
     color: '#666',
@@ -177,6 +242,18 @@ const styles = StyleSheet.create({
     color: '#0a7d28',
     marginTop: 8,
     fontWeight: '600',
+  },
+  xp: {
+    fontSize: 15,
+    color: '#0a7d28',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  streak: {
+    fontSize: 15,
+    color: '#0a7d28',
+    fontWeight: '600',
+    marginTop: 2,
   },
   levelComplete: {
     fontSize: 15,
