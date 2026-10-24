@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "docs",
   "description": "Write docs/ios-focus-setup.md: the exact entitlement/app-group/bundle-id/signing wiring, the Apple paid-account restricted-entitlement request process, the exact commands + manual Xcode steps to build onto a physical iPhone and verify the full authorize->pick->shield->remove->expiry flow, and a clear honest statement that ALL on-device blocking is UNVERIFIED in this environment and precisely why (design.md section 7). Depends on FEAT-003 (documents the actual bundle ids, entitlements, and plugin-generated targets). Independent of FEAT-002.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "Create /Users/Shared/goalie/docs/ios-focus-setup.md documenting the exact entitlement 'com.apple.developer.family-controls'; the app group id 'group.com.goalie.app.focus'; the extension bundle ids 'com.goalie.app.DeviceActivityMonitor' (and optional 'com.goalie.app.ShieldConfiguration'); the main app bundle id 'com.goalie.app'; and the DEVELOPMENT_TEAM='<<APPLE_TEAM_ID>>' signing placeholder and where to set the real team id.",
     "Document the Apple paid-account process to REQUEST the restricted Family Controls entitlement (it is granted by Apple on request to a paid Developer account) and that device signing cannot authorize/shield without it.",
@@ -19,5 +19,5 @@
     "cd /Users/Shared/goalie && npm test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Wrote docs/ios-focus-setup.md per design.md section 7. Documents: entitlement com.apple.developer.family-controls (+ com.apple.security.application-groups); app group group.com.goalie.app.focus; main app bundle com.goalie.app; extension bundle ids com.goalie.app.DeviceActivityMonitor and optional com.goalie.app.ShieldConfiguration; DEVELOPMENT_TEAM='<<APPLE_TEAM_ID>>' placeholder with where to set the real team id (plugin for durability vs one-off in Xcode, noting ios/ is a regenerable prebuild artifact); shared app-group constants (selection.v1, session.v1, store name goalie.focus, DeviceActivityName goalie.focus.session) and extension-point identifiers. Includes the Apple paid-account restricted-entitlement request process (Individual authorization, dev vs distribution note). Includes exact commands (npm install, expo prebuild --platform ios --clean, pod install, open workspace) + manual Xcode steps (set team per target, trust device, select Goalie scheme + physical device, Run) and a step-by-step authorize->pick->shield->remove->expiry-while-closed verification with expected results and a failure checklist. Prominent top-of-file UNVERIFIED/COMPILE-ONLY statement with the three reasons (no physical iPhone, simulator cannot run Screen Time APIs, no paid account / no Family Controls entitlement) and the honest-unavailability note (never fakes a blocked state). Bundle ids/app group confirmed against app.config.ts and modules/goalie-focus/plugin/withGoalieFocus.ts before writing. Verification: npm run typecheck, npm run lint, npm test all pass (21 tests, 3 suites). Docs-only change; no JS/TS source touched. Committed locally on main; not pushed."
 }
