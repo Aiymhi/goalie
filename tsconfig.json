@@ -8,6 +8,7 @@
     "index.ts",
     "src",
     "modules",
+    "types",
     "__tests__"
   ]
 }
