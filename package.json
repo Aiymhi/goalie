@@ -8,7 +8,9 @@
     "test": "jest",
     "lint": "eslint .",
     "prebuild": "expo prebuild --platform ios --clean",
-    "validate-catalog": "node scripts/validate-catalog.mjs"
+    "validate-catalog": "node scripts/validate-catalog.mjs",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "expo": "54.0.38",
