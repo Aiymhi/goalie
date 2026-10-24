@@ -419,6 +419,77 @@ describe('store aiCoaching setting', () => {
   });
 });
 
+describe('store focusSession mirror', () => {
+  it('round-trips a focusSession record', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const data: PersistedData = {
+      ...defaultPersistedData(),
+      focusSession: {
+        id: 'session-abc',
+        deadlineEpochMs: 1_700_000_000_000,
+        selectionSummary: '3 apps, 1 category',
+      },
+    };
+
+    await saveData(data);
+    const loaded = await loadData();
+
+    expect(loaded.focusSession).toEqual({
+      id: 'session-abc',
+      deadlineEpochMs: 1_700_000_000_000,
+      selectionSummary: '3 apps, 1 category',
+    });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('defaults focusSession to null when absent', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    // A valid v2 document that omits focusSession entirely.
+    const doc = {
+      ...defaultPersistedData(),
+      selectedTrackId: 'economics',
+    };
+    delete (doc as { focusSession?: unknown }).focusSession;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+
+    const loaded = await loadData();
+
+    expect(loaded.focusSession).toBeNull();
+    expect(loaded.selectedTrackId).toBe('economics');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('drops a malformed focusSession to null with one warn, keeping authoritative data', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const doc = {
+      ...defaultPersistedData(),
+      selectedTrackId: 'economics',
+      rewards: {
+        version: 2,
+        awardedXp: { 'economics-beginner-1': 20 },
+        totalXp: 20,
+        streak: { count: 1, lastLocalDateYYYYMMDD: '20250131' },
+        earnedBadges: [],
+      },
+      focusSession: {
+        id: '', // empty id is malformed
+        deadlineEpochMs: 'soon', // not a number
+        selectionSummary: 42,
+      },
+    };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+
+    const loaded = await loadData();
+
+    expect(loaded.focusSession).toBeNull();
+    // Authoritative data survives the drop.
+    expect(loaded.rewards.totalXp).toBe(20);
+    expect(loaded.selectedTrackId).toBe('economics');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('goalie: dropped malformed focus session');
+  });
+});
+
 describe('store deletion contract', () => {
   // §8.25 — clearData wipes a v2 document (XP/badges/history gone) -> defaults.
   it('clear -> loadData returns defaults (LOCAL-DATA DELETION CLEARS STATE)', async () => {

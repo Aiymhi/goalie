@@ -325,6 +325,32 @@ function guardV2(value: unknown): GuardResult {
     warnings.push('goalie: reset ai-coaching setting');
   }
 
+  // --- focusSession (non-authoritative local mirror: drop malformed to null) ---
+  // Absent or null is the normal empty state. A present value must be a
+  // well-shaped record (non-empty id, finite deadline, string summary);
+  // anything else is dropped to null with exactly one warn.
+  const rawFocus = value.focusSession;
+  let focusSession: FocusSessionRecord | null;
+  if (rawFocus === undefined || rawFocus === null) {
+    focusSession = null;
+  } else if (
+    isPlainObject(rawFocus) &&
+    typeof rawFocus.id === 'string' &&
+    rawFocus.id.length > 0 &&
+    typeof rawFocus.deadlineEpochMs === 'number' &&
+    Number.isFinite(rawFocus.deadlineEpochMs) &&
+    typeof rawFocus.selectionSummary === 'string'
+  ) {
+    focusSession = {
+      id: rawFocus.id,
+      deadlineEpochMs: rawFocus.deadlineEpochMs,
+      selectionSummary: rawFocus.selectionSummary,
+    };
+  } else {
+    focusSession = null;
+    warnings.push('goalie: dropped malformed focus session');
+  }
+
   return {
     data: {
       version: 2,
@@ -334,6 +360,7 @@ function guardV2(value: unknown): GuardResult {
       rewards: repairedRewards,
       attemptHistory: { questions, practice },
       aiCoaching,
+      focusSession,
     },
     warnings,
   };
