@@ -6,9 +6,285 @@
       "title": "Computer Science",
       "description": "Build foundations for reasoning about software and systems.",
       "levels": [
-        { "id": "beginner", "title": "Beginner", "objective": "Explain an algorithm as a repeatable set of steps.", "lessons": [] },
-        { "id": "intermediate", "title": "Intermediate", "objective": "Compare time and space trade-offs in a small program.", "lessons": [] },
-        { "id": "advanced", "title": "Advanced", "objective": "Explain reliability and performance trade-offs in a design.", "lessons": [] }
+        {
+          "id": "beginner",
+          "title": "Beginner",
+          "objective": "Explain an algorithm as a repeatable set of steps.",
+          "lessons": [
+            {
+              "id": "computer-science-beginner-1",
+              "title": "What an algorithm is",
+              "objective": "State an algorithm as a finite, ordered set of unambiguous steps.",
+              "explanation": "An algorithm is a finite list of clear, ordered steps that takes some input and produces a result. Each step must be unambiguous, and the whole process must eventually stop. A recipe is a familiar example: given ingredients (the input), you follow the steps in order to get a finished dish (the output). The key properties are that the steps are definite, the sequence is ordered, and the process terminates.",
+              "workedExample": "Problem: find the largest of three numbers 4, 9, 2. Steps: (1) assume the first number 4 is the largest so far. (2) Compare with 9; 9 is larger, so the largest so far becomes 9. (3) Compare with 2; 2 is not larger, so keep 9. (4) Stop and report 9. The same four steps work for any three numbers, which is what makes it an algorithm rather than a one-off answer.",
+              "practice": {
+                "prompt": "Write the ordered steps to find the smallest of three numbers.",
+                "answer": "Assume the first number is the smallest; compare it with the second and keep whichever is smaller; compare that with the third and keep whichever is smaller; report the result.",
+                "answerExplanation": "The steps are finite, ordered, and unambiguous, and they terminate with a single result, so they form an algorithm that works for any three numbers."
+              },
+              "nextStep": "Try writing the same smallest-of-three steps for four numbers and notice the repeated compare step."
+            },
+            {
+              "id": "computer-science-beginner-2",
+              "title": "Inputs, outputs, and steps",
+              "objective": "Identify the input, the output, and the ordered steps of a simple procedure.",
+              "explanation": "Every algorithm transforms input into output through a sequence of steps. Naming these three parts makes a procedure easier to reason about and to check. The input is what you start with, the output is what you want to end with, and the steps describe exactly how to get from one to the other. Being explicit about inputs and outputs is the first habit of clear problem solving.",
+              "workedExample": "Procedure: add up a list of prices [2, 3, 5]. Input: the list of three prices. Output: a single total. Steps: (1) start a running total at 0. (2) Add 2, total is 2. (3) Add 3, total is 5. (4) Add 5, total is 10. (5) Report 10. The running total is updated once per item, and the output is the final total.",
+              "practice": {
+                "prompt": "For a procedure that counts how many words are in a sentence, name the input and the output.",
+                "answer": "Input: the sentence (a sequence of words). Output: a single count of how many words it contains.",
+                "answerExplanation": "The input is what you start with (the sentence) and the output is the single result you produce (the word count); the steps in between scan the sentence and increment a counter."
+              },
+              "nextStep": "Pick any everyday task and write down its input, its output, and the steps that connect them."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "computer-science-beginner-m1",
+                "prompt": "Which of these is an algorithm?",
+                "options": [
+                  "A recipe's ordered steps",
+                  "A single number",
+                  "A random guess",
+                  "An empty list"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "computer-science-beginner-m2",
+                "prompt": "Which property must every algorithm have?",
+                "options": [
+                  "It runs forever",
+                  "It eventually stops",
+                  "It has no input",
+                  "It is written in one language only"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-beginner-m3",
+                "prompt": "In a procedure that sums a list of numbers, what is the output?",
+                "options": [
+                  "The list itself",
+                  "The first number",
+                  "The single total",
+                  "The number of steps taken"
+                ],
+                "correctIndex": 2
+              },
+              {
+                "id": "computer-science-beginner-m4",
+                "prompt": "Why must the steps of an algorithm be unambiguous?",
+                "options": [
+                  "So they take longer to run",
+                  "So each step can be followed the same way every time",
+                  "So the input can change by itself",
+                  "So no output is produced"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-beginner-m5",
+                "prompt": "When finding the largest of three numbers, what does the compare step do?",
+                "options": [
+                  "Keeps whichever number is larger as the largest so far",
+                  "Always keeps the first number",
+                  "Adds the two numbers together",
+                  "Discards both numbers"
+                ],
+                "correctIndex": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "intermediate",
+          "title": "Intermediate",
+          "objective": "Compare time and space trade-offs in a small program.",
+          "lessons": [
+            {
+              "id": "computer-science-intermediate-1",
+              "title": "Counting the work a program does",
+              "objective": "Estimate how the number of steps grows as the input grows.",
+              "explanation": "When a program handles more data, we care about how its work grows, not just how long one run takes on one machine. Counting the steps as a function of input size lets us compare approaches fairly. Scanning a list once to find a value does work that grows in proportion to the list length: double the list and you roughly double the steps. This proportional growth is often called linear.",
+              "workedExample": "Searching an unsorted list of 10 items for a value, one item at a time, takes up to 10 comparisons. For 20 items it takes up to 20 comparisons, and for 100 items up to 100. The worst-case number of comparisons equals the list length, so the work grows in direct proportion to the input size.",
+              "practice": {
+                "prompt": "If scanning a list of 50 items takes up to 50 comparisons, about how many does a list of 200 items take in the worst case?",
+                "answer": "About 200 comparisons.",
+                "answerExplanation": "The work grows in direct proportion to the list length, so multiplying the size by four multiplies the worst-case comparisons by four, from 50 to 200."
+              },
+              "nextStep": "Estimate the worst-case comparisons for scanning a list that is ten times larger than one you already counted."
+            },
+            {
+              "id": "computer-science-intermediate-2",
+              "title": "Trading memory for speed",
+              "objective": "Explain how using extra memory can reduce repeated work.",
+              "explanation": "Time and space are two separate costs, and improving one often raises the other. Storing results you have already computed uses more memory but can save repeated work later, which saves time. This trade is a central idea in program design: there is rarely a single best choice, only a choice that fits the limits you care about most, whether that is memory, speed, or simplicity.",
+              "workedExample": "Suppose a program repeatedly needs the total of the same fixed list. Recomputing the total every time repeats the same additions. Instead, compute the total once, store it in a single variable, and reuse it. This uses one extra slot of memory but turns many repeated additions into a single lookup, trading a little space for less repeated time.",
+              "practice": {
+                "prompt": "Give one example of spending extra memory to save repeated work.",
+                "answer": "Storing a value you compute often (such as a running total or a previously looked-up result) so later uses read the stored value instead of recomputing it.",
+                "answerExplanation": "Keeping the computed value uses additional memory but removes the repeated computation, which is the classic space-for-time trade-off."
+              },
+              "nextStep": "Find a calculation your code repeats and decide whether storing the result once would be worth the extra memory."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "computer-science-intermediate-m1",
+                "prompt": "Scanning an unsorted list of 40 items for a value takes at most how many comparisons in the worst case?",
+                "options": [
+                  "About 40",
+                  "About 4",
+                  "About 1600",
+                  "Exactly 1"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "computer-science-intermediate-m2",
+                "prompt": "If work grows in direct proportion to input size, doubling the input does what to the work?",
+                "options": [
+                  "Halves it",
+                  "Leaves it unchanged",
+                  "Roughly doubles it",
+                  "Squares it"
+                ],
+                "correctIndex": 2
+              },
+              {
+                "id": "computer-science-intermediate-m3",
+                "prompt": "Storing a result you compute often is an example of trading what for what?",
+                "options": [
+                  "Trading extra memory for less repeated time",
+                  "Trading less memory for more time",
+                  "Trading correctness for speed",
+                  "Trading input for output"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "computer-science-intermediate-m4",
+                "prompt": "Why do we count steps as a function of input size instead of timing one run?",
+                "options": [
+                  "Because timing is always wrong",
+                  "To compare approaches fairly as data grows",
+                  "Because programs never change speed",
+                  "To avoid writing any code"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-intermediate-m5",
+                "prompt": "Which statement about time and space costs is accurate?",
+                "options": [
+                  "Improving one always improves the other",
+                  "They are the same cost measured twice",
+                  "Improving one often raises the other",
+                  "Neither can ever be measured"
+                ],
+                "correctIndex": 2
+              }
+            ]
+          }
+        },
+        {
+          "id": "advanced",
+          "title": "Advanced",
+          "objective": "Explain reliability and performance trade-offs in a design.",
+          "lessons": [
+            {
+              "id": "computer-science-advanced-1",
+              "title": "Latency versus throughput",
+              "objective": "Distinguish how fast one request finishes from how many finish per second.",
+              "explanation": "Latency is the time a single request takes from start to finish. Throughput is how many requests complete per unit of time. They are related but not the same: a system can have low latency for one user yet low throughput under load, or high throughput while any single request feels slow. Designers choose which to favor based on what users notice most, and improving one can cost the other.",
+              "workedExample": "A checkout service answers one request in 100 milliseconds (its latency). If it can only handle one request at a time, its throughput is 10 requests per second. By processing requests in parallel it may reach 100 requests per second (higher throughput) even though each individual request still takes 100 milliseconds (unchanged latency). Throughput improved without changing latency.",
+              "practice": {
+                "prompt": "A service handles each request in 50 milliseconds and processes one at a time. What is its throughput?",
+                "answer": "20 requests per second.",
+                "answerExplanation": "One request every 50 milliseconds means 1000 divided by 50, which is 20 requests completed per second."
+              },
+              "nextStep": "For a service you know, decide whether its users care more about latency or throughput and why."
+            },
+            {
+              "id": "computer-science-advanced-2",
+              "title": "Redundancy and failure",
+              "objective": "Explain how redundancy improves reliability and what it costs.",
+              "explanation": "Reliability is the chance a system keeps working when parts fail. Redundancy, running more than one copy of a component, lets the system continue if one copy fails. The benefit is fewer total outages; the cost is more resources to run and more complexity to keep copies consistent. As with performance, there is a trade-off: more redundancy raises reliability but also raises cost and coordination effort.",
+              "workedExample": "A service runs on a single server that is up 99% of the time, so it is down about 1% of the time. Adding a second independent server that can take over means both must fail at once for an outage. If failures are independent, the chance both are down at the same time is about 1% of 1%, which is 0.01%, a large reliability gain, paid for by running and coordinating two servers instead of one.",
+              "practice": {
+                "prompt": "Name one benefit and one cost of adding a redundant server.",
+                "answer": "Benefit: the system keeps running if one server fails, improving reliability. Cost: more resources to run and extra effort to keep the copies consistent.",
+                "answerExplanation": "Redundancy reduces outages by tolerating a single failure, but it adds resource cost and coordination complexity, which is the central trade-off."
+              },
+              "nextStep": "Sketch where a single failure could stop a system you use and where a second copy would help most."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "computer-science-advanced-m1",
+                "prompt": "Latency measures which of the following?",
+                "options": [
+                  "How many requests finish per second",
+                  "The time a single request takes to finish",
+                  "The number of servers in use",
+                  "The size of the input list"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-advanced-m2",
+                "prompt": "A service handles each request in 20 milliseconds, one at a time. Its throughput is about:",
+                "options": [
+                  "50 requests per second",
+                  "20 requests per second",
+                  "2 requests per second",
+                  "500 requests per second"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "computer-science-advanced-m3",
+                "prompt": "Running requests in parallel most directly improves which measure?",
+                "options": [
+                  "Latency of a single request",
+                  "Throughput",
+                  "The length of the input",
+                  "The schema version"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-advanced-m4",
+                "prompt": "Why does redundancy improve reliability?",
+                "options": [
+                  "It makes each request faster",
+                  "It lets the system keep working when one copy fails",
+                  "It removes the need for any servers",
+                  "It reduces the amount of code"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "computer-science-advanced-m5",
+                "prompt": "What is a cost of adding redundancy?",
+                "options": [
+                  "Lower reliability",
+                  "Fewer features",
+                  "More resources and coordination effort",
+                  "Shorter latency for every request"
+                ],
+                "correctIndex": 2
+              }
+            ]
+          }
+        }
       ]
     },
     {
@@ -16,19 +292,572 @@
       "title": "Economics",
       "description": "Practice core economic ideas with everyday examples.",
       "levels": [
-        { "id": "beginner", "title": "Beginner", "objective": "Use opportunity cost to compare choices.", "lessons": [] },
-        { "id": "intermediate", "title": "Intermediate", "objective": "Explain how price elasticity describes a change in demand.", "lessons": [] },
-        { "id": "advanced", "title": "Advanced", "objective": "Analyze an externality and compare policy trade-offs.", "lessons": [] }
+        {
+          "id": "beginner",
+          "title": "Beginner",
+          "objective": "Use opportunity cost to compare choices.",
+          "lessons": [
+            {
+              "id": "economics-beginner-1",
+              "title": "Scarcity and choice",
+              "objective": "Explain why scarcity forces people to make choices.",
+              "explanation": "Resources such as time, money, and materials are limited, but people's wants are not. This gap is called scarcity, and it is the reason choices are necessary: you cannot have everything at once, so selecting one option means giving up others. Economics studies how people and societies make these choices when resources are limited.",
+              "workedExample": "You have ten dollars and one hour before class. A book costs ten dollars and a lunch costs ten dollars, but you can afford only one. Because your money is scarce, choosing the book means you cannot also buy the lunch. Scarcity is what turns a simple wish list into a real choice between options.",
+              "practice": {
+                "prompt": "In one sentence, explain why scarcity makes choices necessary.",
+                "answer": "Because resources are limited while wants are not, people must choose some options and give up others.",
+                "answerExplanation": "Scarcity means there is not enough to satisfy every want at once, so any choice involves giving something up."
+              },
+              "nextStep": "List two things you wanted this week and the limited resource that forced you to pick one."
+            },
+            {
+              "id": "economics-beginner-2",
+              "title": "Opportunity cost",
+              "objective": "Identify the opportunity cost of a choice as the best alternative given up.",
+              "explanation": "The opportunity cost of a choice is the value of the single best alternative you gave up to make it. It is not the total of everything you did not choose, only the next-best option you passed up. Thinking in terms of opportunity cost makes the real cost of a decision visible, because every choice uses resources that could have gone to something else.",
+              "workedExample": "You have one free evening. Your options are studying, which you value most after work, or seeing a film, or resting. You choose to work a paid shift. The best alternative you gave up was studying, so the opportunity cost of working is the studying you did not do, not the film and the rest combined.",
+              "practice": {
+                "prompt": "You spend a free hour exercising instead of reading or napping, and you value reading more than napping. What is the opportunity cost?",
+                "answer": "The reading you gave up, because it was your best alternative.",
+                "answerExplanation": "Opportunity cost is only the single best forgone option, which here is reading, not the nap as well."
+              },
+              "nextStep": "For your next spending decision, name the one best alternative you are giving up."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "economics-beginner-m1",
+                "prompt": "Scarcity exists because:",
+                "options": [
+                  "Wants are limited and resources are unlimited",
+                  "Resources are limited while wants are not",
+                  "Everyone already has everything they want",
+                  "Money is the only limited resource"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-beginner-m2",
+                "prompt": "The opportunity cost of a choice is:",
+                "options": [
+                  "The value of the single best alternative given up",
+                  "The total value of every option not chosen",
+                  "The amount of money spent",
+                  "Always zero"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "economics-beginner-m3",
+                "prompt": "You can buy only one of two ten-dollar items because you have ten dollars. This is an example of:",
+                "options": [
+                  "Opportunity cost being zero",
+                  "Unlimited resources",
+                  "Scarcity forcing a choice",
+                  "A market failure"
+                ],
+                "correctIndex": 2
+              },
+              {
+                "id": "economics-beginner-m4",
+                "prompt": "You choose a paid shift over studying (your best alternative) and a film (your second-best). The opportunity cost is:",
+                "options": [
+                  "The film",
+                  "The studying",
+                  "Both the film and the studying",
+                  "The paid shift"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-beginner-m5",
+                "prompt": "Why is thinking in opportunity cost useful?",
+                "options": [
+                  "It hides the real cost of a decision",
+                  "It makes the real cost of a decision visible",
+                  "It removes the need to choose",
+                  "It guarantees the cheapest option"
+                ],
+                "correctIndex": 1
+              }
+            ]
+          }
+        },
+        {
+          "id": "intermediate",
+          "title": "Intermediate",
+          "objective": "Explain how price elasticity describes a change in demand.",
+          "lessons": [
+            {
+              "id": "economics-intermediate-1",
+              "title": "Demand and price",
+              "objective": "Explain the usual relationship between price and quantity demanded.",
+              "explanation": "The law of demand says that, all else equal, when the price of a good rises the quantity people want to buy usually falls, and when the price falls the quantity demanded usually rises. This inverse relationship holds for most goods because higher prices make a good less attractive compared with alternatives and stretch a fixed budget less far.",
+              "workedExample": "A cafe sells 100 cups of coffee a day at two dollars each. It raises the price to three dollars and sales fall to 70 cups. Price went up and quantity demanded went down, which matches the law of demand. If instead it cut the price to one dollar and sales rose to 150 cups, that would also match the inverse relationship.",
+              "practice": {
+                "prompt": "According to the law of demand, if a store lowers a product's price, what usually happens to quantity demanded?",
+                "answer": "Quantity demanded usually rises.",
+                "answerExplanation": "The law of demand describes an inverse relationship: a lower price generally increases the quantity people want to buy, all else equal."
+              },
+              "nextStep": "Find a product whose price recently changed and note whether the quantity people bought moved the opposite way."
+            },
+            {
+              "id": "economics-intermediate-2",
+              "title": "Elastic versus inelastic demand",
+              "objective": "Classify demand as elastic or inelastic from how strongly quantity responds to price.",
+              "explanation": "Price elasticity measures how strongly quantity demanded responds to a price change. Demand is called elastic when quantity responds a lot to a price change and inelastic when it responds only a little. Goods with close substitutes tend to be elastic, while necessities with few substitutes tend to be inelastic. Elasticity helps predict how total spending reacts when a price moves.",
+              "workedExample": "A 10% price increase on a brand of soda causes a 30% drop in quantity sold, because buyers switch to other brands; the large response means demand is elastic. By contrast, a 10% price increase on a life-saving medicine causes only a 2% drop, because buyers have few alternatives; the small response means demand is inelastic.",
+              "practice": {
+                "prompt": "A 10% price rise leads to a 1% fall in quantity demanded. Is this demand elastic or inelastic?",
+                "answer": "Inelastic.",
+                "answerExplanation": "Quantity barely responded to the price change (1% versus 10%), which is the defining feature of inelastic demand."
+              },
+              "nextStep": "Pick a good with many substitutes and one with few, and predict which has more elastic demand."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "economics-intermediate-m1",
+                "prompt": "The law of demand says that, all else equal, a higher price usually leads to:",
+                "options": [
+                  "A higher quantity demanded",
+                  "A lower quantity demanded",
+                  "No change in quantity demanded",
+                  "A higher supply only"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-intermediate-m2",
+                "prompt": "Demand is called elastic when quantity demanded:",
+                "options": [
+                  "Responds a lot to a price change",
+                  "Responds only a little to a price change",
+                  "Never changes",
+                  "Changes only when income changes"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "economics-intermediate-m3",
+                "prompt": "A 10% price rise causes a 2% fall in quantity demanded. This demand is:",
+                "options": [
+                  "Elastic",
+                  "Inelastic",
+                  "Negative supply",
+                  "Unmeasurable"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-intermediate-m4",
+                "prompt": "Goods with many close substitutes tend to have demand that is:",
+                "options": [
+                  "More elastic",
+                  "More inelastic",
+                  "Always perfectly fixed",
+                  "Unrelated to substitutes"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "economics-intermediate-m5",
+                "prompt": "Why does a necessity with few substitutes tend to have inelastic demand?",
+                "options": [
+                  "Buyers can easily switch away",
+                  "Buyers have few alternatives, so quantity responds little to price",
+                  "Its price never changes",
+                  "It has no price at all"
+                ],
+                "correctIndex": 1
+              }
+            ]
+          }
+        },
+        {
+          "id": "advanced",
+          "title": "Advanced",
+          "objective": "Analyze an externality and compare policy trade-offs.",
+          "lessons": [
+            {
+              "id": "economics-advanced-1",
+              "title": "Externalities",
+              "objective": "Define an externality and give an example of a negative one.",
+              "explanation": "An externality is a cost or benefit from an activity that falls on people who are not part of the transaction. A negative externality imposes an uncompensated cost on others, such as pollution from a factory affecting nearby residents. Because the decision-maker does not bear the full cost, the activity tends to be overproduced compared with what is best for society as a whole.",
+              "workedExample": "A factory produces goods and, as a side effect, releases smoke that raises health costs for a neighboring town. The factory pays for its materials and labor but not for the town's health costs, so its private cost is lower than the true social cost. This gap is a negative externality, and it leads the factory to produce more than the socially ideal amount.",
+              "practice": {
+                "prompt": "Give one example of a negative externality and say who bears the uncompensated cost.",
+                "answer": "A factory's pollution, where nearby residents bear the health or cleanup costs even though they are not part of the factory's transaction.",
+                "answerExplanation": "A negative externality is a cost imposed on third parties outside the transaction, which pollution on neighbors illustrates."
+              },
+              "nextStep": "Identify one activity around you that creates a cost for people not involved in it."
+            },
+            {
+              "id": "economics-advanced-2",
+              "title": "Policies for externalities",
+              "objective": "Compare a tax and a regulation as responses to a negative externality.",
+              "explanation": "Governments respond to negative externalities by trying to make decision-makers account for the costs they impose on others. Two common tools are a corrective tax, which charges for each unit of the harmful activity so the private cost rises toward the social cost, and a regulation, which sets a limit or standard on the activity. A tax uses prices to discourage the activity flexibly, while a regulation sets a firm cap; each has trade-offs in flexibility, certainty, and enforcement.",
+              "workedExample": "To reduce factory smoke, a tax of a set amount per ton of emissions raises the firm's cost for each ton, encouraging it to cut emissions where that is cheapest for the firm. A regulation instead caps emissions at a fixed ceiling. The tax gives firms flexibility in how they cut but leaves the exact total less certain; the cap fixes the total but gives firms less choice in how to meet it.",
+              "practice": {
+                "prompt": "Name one advantage of a corrective tax over a fixed emissions cap.",
+                "answer": "A tax gives firms flexibility to cut emissions wherever it is cheapest, rather than forcing one fixed ceiling on everyone.",
+                "answerExplanation": "A per-unit tax lets each firm choose how much to reduce based on its own costs, which is the flexibility advantage over a fixed cap."
+              },
+              "nextStep": "For a local pollution problem, decide whether a tax or a cap would fit better and explain why."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "economics-advanced-m1",
+                "prompt": "An externality is best described as:",
+                "options": [
+                  "A cost or benefit falling on people outside the transaction",
+                  "A tax paid by the buyer",
+                  "The price printed on a product",
+                  "A type of government budget"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "economics-advanced-m2",
+                "prompt": "Factory pollution that raises neighbors' health costs is an example of:",
+                "options": [
+                  "A positive externality",
+                  "A negative externality",
+                  "An opportunity cost of the neighbors",
+                  "Elastic demand"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-advanced-m3",
+                "prompt": "A negative externality tends to cause the activity to be:",
+                "options": [
+                  "Overproduced relative to the social ideal",
+                  "Underproduced relative to the social ideal",
+                  "Produced exactly at the ideal amount",
+                  "Never produced at all"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "economics-advanced-m4",
+                "prompt": "A corrective tax addresses a negative externality mainly by:",
+                "options": [
+                  "Banning the activity entirely",
+                  "Raising the private cost toward the social cost",
+                  "Paying firms to pollute more",
+                  "Lowering the product's price"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "economics-advanced-m5",
+                "prompt": "Compared with a fixed emissions cap, a per-unit tax generally offers:",
+                "options": [
+                  "A certain total emissions level",
+                  "No effect on firm behavior",
+                  "More flexibility in how firms cut emissions",
+                  "A guarantee that emissions reach zero"
+                ],
+                "correctIndex": 2
+              }
+            ]
+          }
+        }
       ]
     },
     {
       "id": "personal-finance",
       "title": "Personal Finance",
       "description": "Learn general financial concepts for informed decisions.",
+      "disclaimer": "Educational content only. This is general information, not personalized investment, tax, legal, credit, or debt advice.",
       "levels": [
-        { "id": "beginner", "title": "Beginner", "objective": "Explain why people track income and expenses.", "lessons": [] },
-        { "id": "intermediate", "title": "Intermediate", "objective": "Compare simple and compound growth.", "lessons": [] },
-        { "id": "advanced", "title": "Advanced", "objective": "Compare borrowing costs using APR, fees, and timing.", "lessons": [] }
+        {
+          "id": "beginner",
+          "title": "Beginner",
+          "objective": "Explain why people track income and expenses.",
+          "lessons": [
+            {
+              "id": "personal-finance-beginner-1",
+              "title": "Income, expenses, and a budget",
+              "objective": "Explain what a budget is and why tracking income and expenses matters.",
+              "explanation": "Income is the money you receive, and expenses are the money you spend. A budget is a plan that compares expected income with planned expenses over a period such as a month. Tracking both makes spending visible, shows whether you are living within your income, and helps you decide where money should go before it is spent. This lesson is general education, not personalized financial advice.",
+              "workedExample": "Suppose monthly income is 2,000 and expenses are rent 900, food 400, transport 200, and other 300, totaling 1,800. Income minus expenses is 2,000 minus 1,800, which leaves 200. The positive 200 is money not already committed, which the budget makes visible so a decision can be made about it.",
+              "practice": {
+                "prompt": "If monthly income is 1,500 and total expenses are 1,350, how much is left over?",
+                "answer": "150.",
+                "answerExplanation": "Subtract expenses from income: 1,500 minus 1,350 equals 150 left over."
+              },
+              "nextStep": "List your own income and expense categories for one month and total each side."
+            },
+            {
+              "id": "personal-finance-beginner-2",
+              "title": "Needs, wants, and saving",
+              "objective": "Separate needs from wants and explain why saving a portion helps.",
+              "explanation": "Needs are expenses required for basic living, such as housing and food, while wants are optional extras you could do without. Separating them helps you prioritize when income is limited. Saving means setting aside part of your income instead of spending it all, which builds a cushion for unexpected costs and future goals. This is general information, not personalized advice.",
+              "workedExample": "From 1,500 of income, suppose needs (housing and food) are 1,000 and wants (entertainment) are 300. That spends 1,300 and leaves 200. Choosing to save the 200 rather than increasing wants builds a cushion. If an unexpected 150 expense appears later, the saved 200 covers it without borrowing.",
+              "practice": {
+                "prompt": "Classify rent and a streaming subscription as a need or a want.",
+                "answer": "Rent is a need; a streaming subscription is a want.",
+                "answerExplanation": "Rent is required for basic living (a need), while a streaming subscription is optional (a want)."
+              },
+              "nextStep": "Go through last month's spending and label each item as a need or a want."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "personal-finance-beginner-m1",
+                "prompt": "A budget is best described as:",
+                "options": [
+                  "A plan comparing expected income with planned expenses",
+                  "A loan from a bank",
+                  "A list of only your wants",
+                  "A guarantee of future income"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "personal-finance-beginner-m2",
+                "prompt": "If income is 2,000 and expenses are 1,800, how much is left over?",
+                "options": [
+                  "3,800",
+                  "200",
+                  "1,800",
+                  "0"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-beginner-m3",
+                "prompt": "Which of these is normally a need rather than a want?",
+                "options": [
+                  "A concert ticket",
+                  "A streaming subscription",
+                  "Housing",
+                  "A second dessert"
+                ],
+                "correctIndex": 2
+              },
+              {
+                "id": "personal-finance-beginner-m4",
+                "prompt": "Saving a portion of income mainly helps by:",
+                "options": [
+                  "Guaranteeing a higher income",
+                  "Building a cushion for unexpected costs and goals",
+                  "Removing the need for a budget",
+                  "Turning wants into needs"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-beginner-m5",
+                "prompt": "Why does tracking income and expenses matter?",
+                "options": [
+                  "It makes spending visible so you can decide where money goes",
+                  "It automatically increases your pay",
+                  "It eliminates all expenses",
+                  "It replaces the need to earn income"
+                ],
+                "correctIndex": 0
+              }
+            ]
+          }
+        },
+        {
+          "id": "intermediate",
+          "title": "Intermediate",
+          "objective": "Compare simple and compound growth.",
+          "lessons": [
+            {
+              "id": "personal-finance-intermediate-1",
+              "title": "Simple interest",
+              "objective": "Compute simple interest as a fixed percentage of the original amount.",
+              "explanation": "Simple interest is calculated only on the original amount, called the principal, and does not change from period to period. Each period adds the same interest, found by multiplying the principal by the rate. Because the base never grows, simple interest adds a flat amount each period. This lesson is general education, not personalized financial advice.",
+              "workedExample": "Place 1,000 at 5% simple interest per year. Each year's interest is 1,000 times 0.05, which is 50. After one year the total is 1,050; after two years it is 1,100; after three years it is 1,150. The 50 per year never changes because it is always based on the original 1,000.",
+              "practice": {
+                "prompt": "How much simple interest does 2,000 earn in one year at 5% per year?",
+                "answer": "100.",
+                "answerExplanation": "Simple interest is principal times rate: 2,000 times 0.05 equals 100 for the year."
+              },
+              "nextStep": "Compute the simple interest on 500 at 4% per year for three years."
+            },
+            {
+              "id": "personal-finance-intermediate-2",
+              "title": "Compound growth",
+              "objective": "Explain how compounding adds interest on previously earned interest.",
+              "explanation": "Compound growth calculates each period's interest on the current balance, which already includes past interest, not just the original principal. Because the base grows each period, the amount added grows too, so a balance compounds faster than the same rate applied as simple interest. Over longer periods this difference becomes large. This is general information, not personalized advice.",
+              "workedExample": "Place 1,000 at 5% compounded yearly. Year one interest is 1,000 times 0.05, which is 50, for a balance of 1,050. Year two interest is 1,050 times 0.05, which is 52.50, for a balance of 1,102.50. The second year's interest exceeds the first because it is figured on the larger balance, unlike simple interest's flat 50.",
+              "practice": {
+                "prompt": "With 1,000 at 5% compounded yearly, is the second year's interest more or less than the first year's?",
+                "answer": "More: about 52.50 versus 50.",
+                "answerExplanation": "Compounding figures the second year's interest on the larger 1,050 balance, so it exceeds the first year's 50."
+              },
+              "nextStep": "Extend the compound example to year three and compare the total with simple interest over the same time."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "personal-finance-intermediate-m1",
+                "prompt": "Simple interest is calculated on:",
+                "options": [
+                  "The original principal only",
+                  "The growing balance each period",
+                  "A random amount",
+                  "The interest alone, not the principal"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "personal-finance-intermediate-m2",
+                "prompt": "How much simple interest does 1,000 earn in one year at 5% per year?",
+                "options": [
+                  "5",
+                  "50",
+                  "500",
+                  "1,050"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-intermediate-m3",
+                "prompt": "Compound growth figures each period's interest on:",
+                "options": [
+                  "The current balance, including past interest",
+                  "The original principal only",
+                  "Nothing; it adds no interest",
+                  "The interest rate alone"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "personal-finance-intermediate-m4",
+                "prompt": "With 1,000 at 5% compounded yearly, the second year's interest is:",
+                "options": [
+                  "Exactly 50, the same as year one",
+                  "About 52.50, more than year one",
+                  "About 45, less than year one",
+                  "Zero"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-intermediate-m5",
+                "prompt": "Over a long period, compound growth compared with simple interest at the same rate tends to produce:",
+                "options": [
+                  "A smaller total",
+                  "An identical total",
+                  "A larger total",
+                  "No interest at all"
+                ],
+                "correctIndex": 2
+              }
+            ]
+          }
+        },
+        {
+          "id": "advanced",
+          "title": "Advanced",
+          "objective": "Compare borrowing costs using APR, fees, and timing.",
+          "lessons": [
+            {
+              "id": "personal-finance-advanced-1",
+              "title": "What APR represents",
+              "objective": "Explain APR as a yearly cost of borrowing that can include fees.",
+              "explanation": "APR, the annual percentage rate, expresses the yearly cost of borrowing as a percentage. It is designed to include not only the interest rate but also certain required fees, so it often reflects the cost of a loan more fully than the stated interest rate alone. A higher APR means a more expensive loan for the same amount and term. This lesson is general education, not personalized financial advice.",
+              "workedExample": "Two loans both quote a 10% interest rate, but loan A has no fees and loan B charges required fees folded into its cost. Because APR includes those fees, loan B's APR might be 12% while loan A's APR stays near 10%. Comparing APRs rather than only the quoted interest rate reveals that loan B is the more expensive borrowing.",
+              "practice": {
+                "prompt": "Why can APR be higher than a loan's stated interest rate?",
+                "answer": "Because APR can include required fees in addition to the interest rate, raising the total yearly cost it reports.",
+                "answerExplanation": "APR is designed to fold in certain required fees, so it can exceed the plain interest rate and reflect the loan's cost more fully."
+              },
+              "nextStep": "When comparing two offers, line up their APRs rather than only their quoted interest rates."
+            },
+            {
+              "id": "personal-finance-advanced-2",
+              "title": "Fees and timing of repayment",
+              "objective": "Explain how fees and how long you borrow affect total borrowing cost.",
+              "explanation": "The total cost of borrowing depends on more than the rate: fees add to what you owe, and the length of time you borrow affects how much interest accumulates. Borrowing a given amount for longer generally means paying more interest in total, even at the same rate, because interest accrues over more periods. Weighing rate, fees, and time together gives a truer picture of cost. This is general information, not personalized advice.",
+              "workedExample": "Borrow 1,000 at 10% simple interest per year. Repaid in one year, the interest is 1,000 times 0.10, which is 100. Repaid over two years at the same simple rate, the interest is 100 per year for two years, which is 200. The same loan costs more in total simply because it is held for a longer time.",
+              "practice": {
+                "prompt": "At the same rate, does borrowing a fixed amount for longer usually increase or decrease the total interest paid?",
+                "answer": "Increase.",
+                "answerExplanation": "Interest accrues over more periods when a loan is held longer, so the total interest paid generally rises even at the same rate."
+              },
+              "nextStep": "For a sample loan, compare the total interest over one year versus two years at the same rate."
+            }
+          ],
+          "mastery": {
+            "passRule": "Complete both lessons AND answer at least 4 of 5 correctly. Retries allowed; earned progress is never lost.",
+            "questions": [
+              {
+                "id": "personal-finance-advanced-m1",
+                "prompt": "APR expresses:",
+                "options": [
+                  "The yearly cost of borrowing as a percentage",
+                  "The number of payments only",
+                  "The lender's total profit for all customers",
+                  "A one-time fixed fee"
+                ],
+                "correctIndex": 0
+              },
+              {
+                "id": "personal-finance-advanced-m2",
+                "prompt": "APR can be higher than the stated interest rate because it:",
+                "options": [
+                  "Ignores the interest rate",
+                  "Can include certain required fees",
+                  "Is always rounded up",
+                  "Counts only the principal"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-advanced-m3",
+                "prompt": "For the same loan amount and term, a higher APR means the loan is:",
+                "options": [
+                  "Cheaper",
+                  "More expensive",
+                  "Exactly the same cost",
+                  "Free to repay"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-advanced-m4",
+                "prompt": "Borrowing 1,000 at 10% simple interest for two years costs how much interest in total?",
+                "options": [
+                  "100",
+                  "200",
+                  "20",
+                  "1,000"
+                ],
+                "correctIndex": 1
+              },
+              {
+                "id": "personal-finance-advanced-m5",
+                "prompt": "At the same rate, holding a loan for a longer time generally:",
+                "options": [
+                  "Lowers the total interest paid",
+                  "Has no effect on interest",
+                  "Raises the total interest paid",
+                  "Eliminates all fees"
+                ],
+                "correctIndex": 2
+              }
+            ]
+          }
+        }
       ]
     }
   ]
