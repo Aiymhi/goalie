@@ -1,0 +1,41 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "reviewDoc": "/Users/Shared/goalie/.agents/tasks/design-review.md",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "location": "§5 (config plugin, extension target)",
+      "problem": "The plugin is said to 'add a DeviceActivityMonitor extension target' as if supported directly, but @expo/config-plugins (verified: expo-config-plugins@58.0.10) exports no high-level helper to create a PBXNativeTarget with its own sources/entitlements/extension-point plist and the host-app 'Embed App Extensions' phase. The only path is the withXcodeProject/withDangerousMod escape hatch plus raw pbxproj manipulation via the xcode lib, or a community helper. This is the single hardest and least-documented step and exactly what the compile-only ceiling must prove, yet the mechanism is unspecified.",
+      "fix": "Name the mechanism in §5: either (a) use withXcodeProject + the xcode library and enumerate the required mutations (create app-extension PBXNativeTarget, Sources phase for GoalieMonitor.swift, dedicated entitlements with Family Controls + App Groups, NSExtensionPointIdentifier=com.apple.deviceactivity.monitor-extension, deployment target 16.0, and a PBXCopyFilesBuildPhase dstSubfolderSpec 13 'Embed App Extensions' into the main target), or (b) adopt and pin a named community extension-target config plugin in §2. Add a §7 note that pbxproj target injection is the top compile-only risk. (Entitlements injection in §5 item 1 via withEntitlementsPlist is fine and not part of this finding.)"
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "location": "§8 (xcodebuild command) vs §3 (app.config.ts)",
+      "problem": "The compile-ceiling command hardcodes ios/Goalie.xcworkspace and -scheme Goalie, but the design never pins the Expo app name/slug those names derive from. If the implementer sets name to anything other than exactly 'Goalie' (e.g. 'goalie'), expo prebuild produces a different workspace/scheme and the stated verification command fails with workspace/scheme-not-found, breaking the entire compile-only verification story on an unstated assumption.",
+      "fix": "Pin the Expo config name and slug explicitly (e.g. name: \"Goalie\", slug: \"goalie\") in §2/§3 and state that the workspace/scheme names follow from name; or make §8 robust by deriving the scheme at runtime via `xcodebuild -list -workspace ios/*.xcworkspace` instead of hardcoding 'Goalie'."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "location": "§6 step 4",
+      "problem": "Device.osVersion is described as 'a string', but the shipped type in expo-device@8.0.10 is `string | null`. Runtime behavior is safe (parseInt(null,10) is NaN, mapped to OSTooOld fail-closed), but the stated type is wrong and could mislead the implementer under strict mode.",
+      "fix": "State that Device.osVersion is `string | null`; null or malformed yields NaN from parseInt and is treated as OSTooOld (fail-closed). Add `null → OSTooOld` to the worked examples in §6/§8."
+    },
+    {
+      "id": 4,
+      "severity": "NIT",
+      "location": "§4.3 step c vs §4.4",
+      "problem": "selectionSummary is persisted into the session.v1 blob in step c, but the text does not say it is recomputed from the decoded selection at that point; a fresh implementer could persist a stale/empty summary.",
+      "fix": "In §4.3 step c state that selectionSummary is recomputed by decoding selection.v1 and formatting '<n> apps, <m> categories' (same derivation as §4.4), so the session summary always matches the selection used to build the shield."
+    },
+    {
+      "id": 5,
+      "severity": "NIT",
+      "location": "§4.3 step 3.0 vs step 3b rollback",
+      "problem": "The E_SESSION_ACTIVE guard keys only off the presence of session.v1, but a failed start (step 3b with a secondary stopMonitoring failure) can leave a live DeviceActivity schedule while persisting no session. A subsequent startFocusSession then passes the guard and double-schedules the same activity name. The design's self-heal relies on the caller having run stopFocusSession() first, which is not stated as a restart precondition.",
+      "fix": "Either defensively call stopMonitoring([activityName]) in step 3.0/step a before startMonitoring to clear any orphaned schedule regardless of session state, or document in §4.2 that after E_SHIELD_FAILED/E_SCHEDULE_FAILED the caller MUST call stopFocusSession() before retrying."
+    }
+  ]
+}

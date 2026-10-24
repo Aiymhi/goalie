@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Scaffold the Expo SDK 54 custom-dev-build app root with EXACT pins from design.md section 2, producing package-lock.json. This is the foundation every later FEAT builds on. Depends on nothing. Preserve content/tracks.json and scripts/validate-catalog.mjs untouched.",
+  "status": "completed",
+  "steps": [
+    "Create /Users/Shared/goalie/package.json: name 'goalie', main 'index.ts', private true. Scripts: 'typecheck' = 'tsc --noEmit', 'test' = 'jest', 'lint' = 'eslint .', 'prebuild' = 'expo prebuild --platform ios --clean', 'validate-catalog' = 'node scripts/validate-catalog.mjs'. dependencies (EXACT, no changes): expo '54.0.38', react '19.1.0', react-dom '19.1.0', react-native '0.81.5', react-native-safe-area-context '~5.6.0', react-native-screens '~4.16.0', expo-device '~8.0.10', expo-constants '~18.0.14', '@react-navigation/native' '7.5.1' (no caret), '@react-navigation/native-stack' '7.21.0' (no caret), expo-dev-client '~6.0.21', expo-build-properties '~1.0.10'. devDependencies: typescript '5.9.3', '@types/react' '19.1.17', jest-expo '54.0.18', jest '~29.7.0', '@types/jest' '^29.5.0', eslint '^9', eslint-config-expo '10.0.0'.",
+    "Create /Users/Shared/goalie/tsconfig.json extending 'expo/tsconfig.base' with compilerOptions.strict = true and include covering App.tsx, index.ts, src, modules, __tests__.",
+    "Create /Users/Shared/goalie/babel.config.js exporting a function returning { presets: ['babel-preset-expo'] }.",
+    "Create /Users/Shared/goalie/jest.config.js with preset 'jest-expo' and a transformIgnorePatterns that allows the RN/Expo/react-navigation packages (use the standard jest-expo transformIgnorePatterns).",
+    "Create /Users/Shared/goalie/eslint.config.js as flat config extending eslint-config-expo/flat (per eslint-config-expo@10 docs).",
+    "Create /Users/Shared/goalie/index.ts that calls registerRootComponent(App) importing App from './App'.",
+    "Create /Users/Shared/goalie/App.tsx as a minimal component that renders a placeholder (it will be wired to RootNavigator in FEAT-002; for now a minimal SafeAreaProvider + a Text placeholder is fine so typecheck passes).",
+    "Create /Users/Shared/goalie/app.config.ts (TS Expo config default export): name 'Goalie', slug 'goalie', ios.bundleIdentifier 'com.goalie.app', define the app group id 'group.com.goalie.app.focus' as a single constant, and register plugins ['expo-dev-client', ['expo-build-properties', { ios: { deploymentTarget: '16.0' } }]]. Leave a clearly-marked spot to add the './modules/goalie-focus/plugin/withGoalieFocus' plugin in FEAT-003 (add a TODO comment; do not reference a file that does not exist yet or typecheck/prebuild will fail).",
+    "Run npm install to resolve the graph and produce package-lock.json.",
+    "After install, read the resolved @react-navigation/native and @react-navigation/native-stack patch versions from package-lock.json; if they differ from 7.5.1 / 7.21.0, record the resolved patches in the FEAT findings (and they stay the pinned exact versions in package.json)."
+  ],
+  "acceptance_criteria": [
+    "npm install completes and /Users/Shared/goalie/package-lock.json exists and is consistent.",
+    "node scripts/validate-catalog.mjs prints 'Course catalog structure valid: 3 tracks, 3 levels each.' (content + validator untouched).",
+    "All dependency versions in package.json match design.md section 2 exactly (no accidental carets on the two @react-navigation pins).",
+    "npm run typecheck passes against the minimal App.tsx/index.ts (strict TS)."
+  ],
+  "verification": [
+    "cd /Users/Shared/goalie && npm install",
+    "cd /Users/Shared/goalie && node scripts/validate-catalog.mjs",
+    "cd /Users/Shared/goalie && npm run typecheck"
+  ],
+  "blocked_reason": null,
+  "findings": "Scaffold complete on branch main. npm install (Node v20.19.4, npm 11.7.0) resolved 997 packages and wrote package-lock.json. Verification all green: `npm run typecheck` (tsc --noEmit strict) passes against App.tsx/index.ts; `node scripts/validate-catalog.mjs` prints 'Course catalog structure valid: 3 tracks, 3 levels each.' (content + validator untouched). RESOLVED @react-navigation PATCHES: @react-navigation/native resolved to exactly 7.5.1 and @react-navigation/native-stack to exactly 7.21.0 (no drift from the design.md section 2 pins); both are pinned with NO caret in package.json. Pulled-in @react-navigation/elements@2.9.45 (dedupes native@7.5.1). FOR LATER FEATs: (a) app.config.ts defines a single APP_GROUP_ID constant 'group.com.goalie.app.focus' and has a clearly-marked TODO(FEAT-003) spot in the plugins array to register './modules/goalie-focus/plugin/withGoalieFocus' — do not reference that path until the file exists or typecheck/prebuild breaks. (b) tsconfig include covers App.tsx, index.ts, src, modules, __tests__ (dirs not yet created — add sources there in later FEATs). (c) jest.config.js uses the standard jest-expo preset + transformIgnorePatterns (whitelists react-navigation); no tests exist yet, so `npm test` will report no tests until FEAT adds __tests__. (d) eslint.config.js is flat config extending eslint-config-expo/flat and ignores ios/android/dist. (e) npm audit reports 7 vulnerabilities (1 moderate, 6 high) from transitive deps of the pinned SDK 54 matrix — left untouched since pins are locked by design.md section 2. App.tsx is a placeholder SafeAreaProvider+Text to be replaced by RootNavigator in FEAT-002."
+}

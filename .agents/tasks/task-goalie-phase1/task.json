@@ -1,0 +1,7 @@
+{
+  "task_id": "task-goalie-phase1",
+  "task_description": "Implement Phase 1 of the Goalie app per the FIXED design at /Users/Shared/goalie/.agents/tasks/design.md: scaffold an Expo SDK 54 custom-dev-build RN+TS app (exact pins) producing package-lock.json; implement a pure-TS content/domain layer with loadCatalog + 5 named tests and placeholder modules; a typed JS focus availability layer (async, honest 'unavailable' reporting) + navigation shell + placeholder Home; a REAL Swift native focus module + Expo config plugin (withXcodeProject pbxproj mutation) + DeviceActivityMonitor extension sources + entitlements/app-group wiring; docs/ios-focus-setup.md with device-verify steps and the honest UNVERIFIED statement. Verify via npm install, typecheck, lint, jest, expo prebuild, and an iPhone 16 simulator xcodebuild compile. On-device blocking is compile-only verifiable here and must be reported UNVERIFIED.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

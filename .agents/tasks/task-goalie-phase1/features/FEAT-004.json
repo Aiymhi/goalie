@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-004",
+  "type": "docs",
+  "description": "Write docs/ios-focus-setup.md: the exact entitlement/app-group/bundle-id/signing wiring, the Apple paid-account restricted-entitlement request process, the exact commands + manual Xcode steps to build onto a physical iPhone and verify the full authorize->pick->shield->remove->expiry flow, and a clear honest statement that ALL on-device blocking is UNVERIFIED in this environment and precisely why (design.md section 7). Depends on FEAT-003 (documents the actual bundle ids, entitlements, and plugin-generated targets). Independent of FEAT-002.",
+  "status": "pending",
+  "steps": [
+    "Create /Users/Shared/goalie/docs/ios-focus-setup.md documenting the exact entitlement 'com.apple.developer.family-controls'; the app group id 'group.com.goalie.app.focus'; the extension bundle ids 'com.goalie.app.DeviceActivityMonitor' (and optional 'com.goalie.app.ShieldConfiguration'); the main app bundle id 'com.goalie.app'; and the DEVELOPMENT_TEAM='<<APPLE_TEAM_ID>>' signing placeholder and where to set the real team id.",
+    "Document the Apple paid-account process to REQUEST the restricted Family Controls entitlement (it is granted by Apple on request to a paid Developer account) and that device signing cannot authorize/shield without it.",
+    "Document the exact commands and manual Xcode steps to build onto a physical iPhone (set team, trust the device, select the Goalie scheme + physical device destination, run) and to verify the full authorize->pick (FamilyActivityPicker)->shield->remove->expiry-while-closed flow.",
+    "Add a clear, prominent statement that in THIS environment ALL on-device blocking is UNVERIFIED and precisely why: no physical iPhone, no paid Apple Developer account / no Family Controls entitlement, and the iOS Simulator cannot execute Screen Time / Family Controls / ManagedSettings / DeviceActivity, so the verification ceiling is COMPILE-ONLY. Note the app honestly reports 'focus protection unavailable' on web/Android/Expo Go/simulator/unauthorized and never fakes a blocked state."
+  ],
+  "acceptance_criteria": [
+    "docs/ios-focus-setup.md exists and contains the entitlement name, app group id, both extension bundle ids, the signing-team placeholder, the paid-account entitlement-request process, physical-device build + verify steps, and the explicit UNVERIFIED/compile-only statement with its reasons.",
+    "The existing JS/TS build and tests are unaffected: npm run typecheck, npm run lint, and npm test still pass."
+  ],
+  "verification": [
+    "cd /Users/Shared/goalie && npm run typecheck",
+    "cd /Users/Shared/goalie && npm run lint",
+    "cd /Users/Shared/goalie && npm test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

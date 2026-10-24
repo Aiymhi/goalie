@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "tracks": [
+    {
+      "id": "computer-science",
+      "title": "Computer Science",
+      "description": "Build foundations for reasoning about software and systems.",
+      "levels": [
+        { "id": "beginner", "title": "Beginner", "objective": "Explain an algorithm as a repeatable set of steps.", "lessons": [] },
+        { "id": "intermediate", "title": "Intermediate", "objective": "Compare time and space trade-offs in a small program.", "lessons": [] },
+        { "id": "advanced", "title": "Advanced", "objective": "Explain reliability and performance trade-offs in a design.", "lessons": [] }
+      ]
+    },
+    {
+      "id": "economics",
+      "title": "Economics",
+      "description": "Practice core economic ideas with everyday examples.",
+      "levels": [
+        { "id": "beginner", "title": "Beginner", "objective": "Use opportunity cost to compare choices.", "lessons": [] },
+        { "id": "intermediate", "title": "Intermediate", "objective": "Explain how price elasticity describes a change in demand.", "lessons": [] },
+        { "id": "advanced", "title": "Advanced", "objective": "Analyze an externality and compare policy trade-offs.", "lessons": [] }
+      ]
+    },
+    {
+      "id": "personal-finance",
+      "title": "Personal Finance",
+      "description": "Learn general financial concepts for informed decisions.",
+      "levels": [
+        { "id": "beginner", "title": "Beginner", "objective": "Explain why people track income and expenses.", "lessons": [] },
+        { "id": "intermediate", "title": "Intermediate", "objective": "Compare simple and compound growth.", "lessons": [] },
+        { "id": "advanced", "title": "Advanced", "objective": "Compare borrowing costs using APR, fees, and timing.", "lessons": [] }
+      ]
+    }
+  ]
+}

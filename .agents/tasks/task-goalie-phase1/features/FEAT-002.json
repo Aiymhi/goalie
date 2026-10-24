@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Implement all the pure-JS/TS runtime logic and its tests: the content/domain layer (loadCatalog + the 5 named tests), the placeholder domain modules, the typed JS focus API + async availability layer (honest 'unavailable' reporting), the navigation shell + placeholder Home screen, and the availability unit tests. This is the only runtime-testable logic in Phase 1. Depends on FEAT-001 (needs package.json, tsconfig, jest config). Independent of FEAT-003's native Swift/plugin work except that FEAT-003's modules/goalie-focus/index.ts re-exports this layer.",
+  "status": "pending",
+  "steps": [
+    "Create /Users/Shared/goalie/src/domain/content/catalog.types.ts per design.md section 3.1: LevelId = 'beginner'|'intermediate'|'advanced'; interfaces Lesson {id,title,objective}, Level {id:LevelId,title,objective,lessons:Lesson[]}, Track {id,title,description,levels:Level[]}, Catalog {schemaVersion:1,tracks:Track[]}; and class CatalogError extends Error (name 'CatalogError'). Pure TS, no react/react-native/Node imports.",
+    "Create /Users/Shared/goalie/src/domain/content/catalog.ts exporting loadCatalog(raw: unknown): Catalog that re-validates in the section 3.1 order, throwing a CatalogError with a specific message on the FIRST violation and never returning a partial: (1) schemaVersion===1 else 'unsupported schemaVersion'; (2) tracks is a non-empty array; (3) each track has a non-empty string id and ids are unique else 'duplicate track id \"<id>\"'; (4) non-empty string title and description; (5) exactly three levels with ids beginner,intermediate,advanced in that order else '<trackId>: levels must be beginner, intermediate, advanced in order'; (6) each level has non-empty string title and objective and lessons is an array, each present lesson has non-empty string id,title,objective. Do NOT enforce the three specific starter-track ids (that stays the build-time validator's content-policy job).",
+    "Create the placeholder domain modules per section 3.2, each exporting a NotImplementedError class plus one named typed function that throws it: /Users/Shared/goalie/src/domain/assessment/index.ts (evaluateAssessment -> AssessmentResult {trackId,levelId:LevelId,passed:boolean}), src/domain/rewards/index.ts (grantReward), src/domain/progression/index.ts (advanceProgress), src/domain/certificates/index.ts (issueCertificate). Each has a named return type and throws NotImplementedError('<feature>').",
+    "Create /Users/Shared/goalie/src/focus/types.ts per section 4.2: enum AuthorizationStatus {NotDetermined,Denied,Approved}; enum FocusUnavailableReason {NotIOS,Simulator,ExpoGo,OSTooOld,NotAuthorized}; type FocusAvailability = {available:true} | {available:false; reason:FocusUnavailableReason}; type FocusSelection = {summary:string}; interface FocusSession {id:string;deadlineEpochMs:number;selectionSummary:string}; class FocusUnavailableError extends Error (carries reason); class FocusCancelledError extends Error; interface GoalieFocusApi with the 7 methods from section 4.2.",
+    "Create /Users/Shared/goalie/src/focus/GoalieFocus.ts: the typed JS API implementing GoalieFocusApi by calling the native module (requireNativeModule/requireOptionalNativeModule from expo-modules-core). When the native module is absent OR Platform.OS !== 'ios', resolve to a stub whose methods reject with FocusUnavailableError(appropriate reason) rather than opaque 'module not found'. presentActivityPicker rejects FocusCancelledError on user dismissal. Operation errors surface as rejected promises carrying the section 4.1 native codes.",
+    "Create /Users/Shared/goalie/src/focus/availability.ts exporting async getFocusAvailability(): Promise<FocusAvailability> with the exact section 6 precedence, first match wins: 1 (sync) Platform.OS !== 'ios' -> NotIOS; 2 (sync) !Device.isDevice (expo-device) -> Simulator; 3 (sync) focus native module absent/unregistered -> ExpoGo (do NOT branch on Constants.appOwnership); 4 (sync) major = parseInt(Device.osVersion ?? '', 10), NaN -> OSTooOld (fail-closed), major < 16 -> OSTooOld; 5 (await) getAuthorizationStatus(), if !== Approved -> NotAuthorized, and if the call itself rejects catch and resolve NotAuthorized (fail-closed); else {available:true}. Steps 1-4 make no bridge call.",
+    "Create /Users/Shared/goalie/src/ui/navigation/RootNavigator.tsx: a @react-navigation/native-stack shell with a NavigationContainer and one route to HomeScreen.",
+    "Create /Users/Shared/goalie/src/ui/screens/HomeScreen.tsx: a placeholder screen that on mount awaits getFocusAvailability() and renders the verdict verbatim (when unavailable, show the reason). It must NEVER show a fake blocked/green state. In this environment it will render unavailable + reason.",
+    "Update /Users/Shared/goalie/App.tsx to mount RootNavigator (wrapped in SafeAreaProvider).",
+    "Add /Users/Shared/goalie/__tests__/catalog.test.ts with the 5 named cases from section 3.1: valid-parse (import the real content/tracks.json and assert loadCatalog returns a Catalog of 3 tracks x 3 levels), wrong-schema (schemaVersion 2 fixture -> throws CatalogError), missing-level (track missing intermediate -> throws), duplicate-id (two tracks share an id -> throws), order (advanced before beginner -> throws). Use inline fixtures for invalid cases.",
+    "Add /Users/Shared/goalie/__tests__/placeholders.test.ts asserting each of the 4 placeholder functions throws NotImplementedError.",
+    "Add /Users/Shared/goalie/__tests__/availability.test.ts stubbing Platform and expo-device Device to assert the section 6 precedence: NotIOS on non-ios; Simulator when !isDevice; ExpoGo when module absent; OSTooOld for '15.7', null, '', and malformed; eligible for '18.5','16','16.0'; NotAuthorized when status !== Approved and when the status call rejects. Mock the native module/getAuthorizationStatus as needed."
+  ],
+  "acceptance_criteria": [
+    "npm run typecheck passes (strict) across src/ and __tests__/.",
+    "npm test passes: the 5 named loadCatalog tests, the placeholder-contract tests, and the availability-precedence + osVersion-parse tests all pass.",
+    "src/domain/ contains no react/react-native/Node-IO imports (pure TS).",
+    "HomeScreen renders the availability verdict verbatim and never a fake blocked state."
+  ],
+  "verification": [
+    "cd /Users/Shared/goalie && npm run typecheck",
+    "cd /Users/Shared/goalie && npm test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
