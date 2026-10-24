@@ -89,6 +89,10 @@ export interface ProgressionContextValue {
   // Local mirror of the most recent voluntary focus session (Phase 5). The
   // native app-group record is authoritative; this is a non-authoritative cache.
   focusSession: FocusSessionRecord | null;
+  // Per-level completion timestamps (Phase 6). Key `${trackId}/${levelId}` ->
+  // epoch-ms recorded on the real false->true completion edge. Read-only here;
+  // written monotonically inside completeLesson/recordMasteryResult.
+  completedLevels: Record<string, number>;
   // Persist the focus-session local mirror (Phase 5). Never creates learning
   // credit — it does not touch progression/rewards.
   setFocusSession: (next: FocusSessionRecord | null) => Promise<void>;
@@ -199,6 +203,30 @@ export function ProgressionProvider({
     [catalog],
   );
 
+  // Phase 6: from the emitted 'level-completed' events, record a completion
+  // timestamp for any level whose key is not already present. Monotonic — an
+  // existing timestamp is NEVER overwritten (the first true edge wins). Returns
+  // the (possibly unchanged) map; the caller folds it into the single write.
+  const recordCompletions = useCallback(
+    (
+      prev: Record<string, number>,
+      events: { trackId: string; levelId: LevelId }[],
+    ): Record<string, number> => {
+      let next = prev;
+      for (const event of events) {
+        const key = `${event.trackId}/${event.levelId}`;
+        if (!Object.prototype.hasOwnProperty.call(next, key)) {
+          if (next === prev) {
+            next = { ...prev };
+          }
+          next[key] = clock.nowEpochMs();
+        }
+      }
+      return next;
+    },
+    [clock],
+  );
+
   const setSelection = useCallback(
     async (trackId: string, displayName: string | null) => {
       const next: PersistedData = {
@@ -246,17 +274,21 @@ export function ProgressionProvider({
           [lessonId]: { hadText, atEpochMs: clock.nowEpochMs() },
         },
       };
-      // 6) single persisted transaction.
+      // 6) Phase 6: record a completion timestamp on the real false->true edge
+      // (monotonic; never overwrites an existing one).
+      const nextCompleted = recordCompletions(data.completedLevels, events);
+      // 7) single persisted transaction.
       await persist({
         ...data,
         progression: nextProg,
         rewards: badge.state,
         attemptHistory: nextHistory,
+        completedLevels: nextCompleted,
       });
-      // 7) return outcome + badge + the PRE-WRITE prior for coaching.
+      // 8) return outcome + badge + the PRE-WRITE prior for coaching.
       return { outcome, badgeEarned: badge.badgeEarned, priorPracticeAttempt };
     },
-    [data, persist, resolveLevel, clock],
+    [data, persist, resolveLevel, clock, recordCompletions],
   );
 
   const recordMasteryResult = useCallback(
@@ -300,14 +332,18 @@ export function ProgressionProvider({
         };
       }
       const nextHistory = { ...data.attemptHistory, questions: nextQuestions };
-      // 6) single persisted transaction.
+      // 6) Phase 6: record a completion timestamp on the real false->true edge
+      // (monotonic; never overwrites an existing one).
+      const nextCompleted = recordCompletions(data.completedLevels, events);
+      // 7) single persisted transaction.
       await persist({
         ...data,
         progression: nextProg,
         rewards: badge.state,
         attemptHistory: nextHistory,
+        completedLevels: nextCompleted,
       });
-      // 7) synthetic "no XP" outcome on a fail so the screen renders without
+      // 8) synthetic "no XP" outcome on a fail so the screen renders without
       // special-casing null.
       const outcome: RewardOutcome =
         masteryOutcome ?? {
@@ -319,10 +355,10 @@ export function ProgressionProvider({
           newStreakCount: data.rewards.streak.count,
           badgeEarned: null,
         };
-      // 8) return outcome + badge + the PRE-WRITE priors for per-question coaching.
+      // 9) return outcome + badge + the PRE-WRITE priors for per-question coaching.
       return { outcome, badgeEarned: badge.badgeEarned, priorByQuestionId };
     },
-    [data, persist, resolveLevel, clock],
+    [data, persist, resolveLevel, clock, recordCompletions],
   );
 
   const setAiCoaching = useCallback(
@@ -357,6 +393,7 @@ export function ProgressionProvider({
       viewRewards: viewRewards(data.rewards),
       aiCoaching: data.aiCoaching,
       focusSession: data.focusSession,
+      completedLevels: data.completedLevels,
       reload,
       setSelection,
       completeLesson,
@@ -375,6 +412,7 @@ export function ProgressionProvider({
       data.rewards,
       data.aiCoaching,
       data.focusSession,
+      data.completedLevels,
       reload,
       setSelection,
       completeLesson,

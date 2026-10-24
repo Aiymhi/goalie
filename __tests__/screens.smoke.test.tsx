@@ -13,6 +13,8 @@ import {
   ProgressionProvider,
   useProgression,
 } from '../src/ui/context/ProgressionProvider';
+import { CertificateDetailScreen } from '../src/ui/screens/CertificateDetailScreen';
+import { CertificateScreen } from '../src/ui/screens/CertificateScreen';
 import { CoursePathScreen } from '../src/ui/screens/CoursePathScreen';
 import { FocusScreen } from '../src/ui/screens/FocusScreen';
 import { MasteryResultScreen } from '../src/ui/screens/MasteryResultScreen';
@@ -24,6 +26,43 @@ import type { RootStackParamList } from '../src/ui/navigation/RootNavigator';
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// Mock the Phase 6 native PDF/sharing modules so no real native call is made.
+// isAvailableAsync is controllable per-test via setShareAvailable(); the default
+// is true. printToFileAsync/shareAsync/File are no-op fakes.
+let mockSharingAvailable = true;
+function setShareAvailable(value: boolean): void {
+  mockSharingAvailable = value;
+}
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn(async () => ({
+    uri: 'file:///cache/certificate.pdf',
+    numberOfPages: 1,
+  })),
+}));
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(async () => mockSharingAvailable),
+  shareAsync: jest.fn(async () => undefined),
+}));
+jest.mock('expo-file-system', () => ({
+  Paths: { document: { uri: 'file:///documents/' } },
+  File: class {
+    uri: string;
+    exists = false;
+    constructor(...args: unknown[]) {
+      const last = args[args.length - 1];
+      this.uri =
+        typeof last === 'string'
+          ? last
+          : 'file:///documents/certificate.pdf';
+    }
+    get name(): string {
+      return 'certificate.pdf';
+    }
+    copy(): void {}
+    delete(): void {}
+  },
+}));
 
 // This environment is not an iOS device, so getFocusAvailability() resolves to
 // an honest "unavailable" verdict (NotIOS on the jest/node host). We assert the
@@ -149,11 +188,14 @@ const ROUTE_COMPONENTS: Partial<
   Progress: ProgressScreen as React.ComponentType<object>,
   Result: ResultScreen as React.ComponentType<object>,
   MasteryResult: MasteryResultScreen as React.ComponentType<object>,
+  Certificate: CertificateScreen as React.ComponentType<object>,
+  CertificateDetail: CertificateDetailScreen as React.ComponentType<object>,
 };
 
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.restoreAllMocks();
+  setShareAvailable(true);
 });
 
 describe('Focus screen (honest availability)', () => {
@@ -205,6 +247,7 @@ function v2Doc(
     attemptHistory: unknown;
     aiCoaching: unknown;
     focusSession: unknown;
+    completedLevels: unknown;
   }> = {},
 ): string {
   return JSON.stringify({
@@ -222,6 +265,7 @@ function v2Doc(
     attemptHistory: { questions: {}, practice: {} },
     aiCoaching: { enabled: false, endpointUrl: null, disclosureAcknowledged: false },
     focusSession: null,
+    completedLevels: {},
     ...overrides,
   });
 }
@@ -582,5 +626,182 @@ describe('rewards wiring (XP/streak/badge exactly once, surviving reopen)', () =
     const after = JSON.parse((await AsyncStorage.getItem(STORAGE_KEY)) as string);
     expect(after.rewards.totalXp).toBe(20);
     expect(after.rewards.earnedBadges).toEqual([]);
+  });
+});
+
+// Phase 6 — the exact disclaimer the certificate must carry verbatim.
+const DISCLAIMER =
+  'Completion certificate — not academic credit or an accredited professional credential.';
+const BEGINNER_KEY = 'computer-science/beginner';
+// A fixed epoch the FakeClock reports for nowEpochMs(), so the recorded
+// completion timestamp is deterministic.
+const COMPLETION_EPOCH = 1_700_000_000_000;
+
+// A v2 doc with the beginner level fully complete AND a recorded completion
+// timestamp, ready for the certificate detail to render an honest date.
+function completeBeginnerDoc(recordedEpoch: number | null): string {
+  return v2Doc({
+    displayName: 'Ada',
+    progression: {
+      version: 1,
+      levels: {
+        'computer-science/beginner': {
+          completedLessonIds: [LESSON_1, LESSON_2],
+          masteryPassed: true,
+          bestCorrectCount: 5,
+        },
+      },
+    },
+    rewards: {
+      version: 2,
+      awardedXp: {
+        [LESSON_1]: 20,
+        [LESSON_2]: 20,
+        'mastery:computer-science/beginner': 50,
+      },
+      totalXp: 90,
+      streak: { count: 1, lastLocalDateYYYYMMDD: '20250131' },
+      earnedBadges: ['computer-science/beginner'],
+    },
+    completedLevels:
+      recordedEpoch === null ? {} : { [BEGINNER_KEY]: recordedEpoch },
+  });
+}
+
+describe('Phase 6 certificates + completion timestamps', () => {
+  it('records a completedLevels timestamp on the real completion edge that survives reopen', async () => {
+    // Both lessons already done; the mastery PASS is the false->true edge.
+    await AsyncStorage.setItem(STORAGE_KEY, bothLessonsCompleteDoc());
+
+    const pass = await mount(
+      'MasteryResult',
+      { trackId: CS, levelId: BEGINNER, answers: PASS_ANSWERS },
+      { clock: new FakeClock('20250131', COMPLETION_EPOCH) },
+    );
+    await act(async () => {
+      pass.unmount();
+    });
+
+    const saved = JSON.parse((await AsyncStorage.getItem(STORAGE_KEY)) as string);
+    expect(saved.completedLevels[BEGINNER_KEY]).toBe(COMPLETION_EPOCH);
+
+    // Reopen: the recorded timestamp is still present and is NOT overwritten by
+    // a later visit with a different clock value.
+    const reopen = await remount(
+      'MasteryResult',
+      { trackId: CS, levelId: BEGINNER, answers: PASS_ANSWERS },
+      { clock: new FakeClock('20250201', COMPLETION_EPOCH + 999_999) },
+    );
+    await act(async () => {
+      reopen.unmount();
+    });
+
+    const after = JSON.parse((await AsyncStorage.getItem(STORAGE_KEY)) as string);
+    expect(after.completedLevels[BEGINNER_KEY]).toBe(COMPLETION_EPOCH);
+  });
+
+  it('certificate detail renders the recorded date, exact disclaimer, and a copyable post', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, completeBeginnerDoc(COMPLETION_EPOCH));
+
+    const tree = await mount('CertificateDetail', {
+      trackId: CS,
+      levelId: BEGINNER,
+    });
+    const text = renderedText(tree);
+
+    expect(text).toContain(DISCLAIMER);
+    expect(text).not.toContain('Completion date not recorded');
+    // The editable, copyable social post names the track/level.
+    expect(text).toContain('Computer Science');
+    // No verification URL anywhere.
+    expect(text.toLowerCase()).not.toContain('http');
+
+    await act(async () => {
+      tree.unmount();
+    });
+  });
+
+  it('shows the honest "not recorded" date when no completion timestamp exists (never now())', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, completeBeginnerDoc(null));
+
+    const tree = await mount('CertificateDetail', {
+      trackId: CS,
+      levelId: BEGINNER,
+    });
+    const text = renderedText(tree);
+
+    expect(text).toContain('Completion date not recorded');
+
+    await act(async () => {
+      tree.unmount();
+    });
+  });
+
+  it('offers Share only when Sharing.isAvailableAsync() resolves true (both branches)', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, completeBeginnerDoc(COMPLETION_EPOCH));
+
+    // Branch 1: sharing available -> a Share affordance is present.
+    setShareAvailable(true);
+    const withShare = await mount('CertificateDetail', {
+      trackId: CS,
+      levelId: BEGINNER,
+    });
+    expect(renderedText(withShare)).toContain('Share');
+    await act(async () => {
+      withShare.unmount();
+    });
+
+    // Branch 2: sharing unavailable -> honest unavailable copy, no Share button.
+    setShareAvailable(false);
+    const noShare = await mount('CertificateDetail', {
+      trackId: CS,
+      levelId: BEGINNER,
+    });
+    const noShareText = renderedText(noShare);
+    expect(noShareText).toContain('Sharing is unavailable on this device');
+    await act(async () => {
+      noShare.unmount();
+    });
+  });
+
+  it('an INCOMPLETE level is omitted from the list and the detail refuses generation', async () => {
+    // Beginner is NOT complete (mastery not passed): the list shows none, and
+    // the detail domain throws so no certificate renders.
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      v2Doc({
+        displayName: 'Ada',
+        progression: {
+          version: 1,
+          levels: {
+            'computer-science/beginner': {
+              completedLessonIds: [LESSON_1, LESSON_2],
+              masteryPassed: false,
+              bestCorrectCount: 0,
+            },
+          },
+        },
+      }),
+    );
+
+    // The list screen shows the honest empty state, never a level entry.
+    const list = await mount('Certificate', { trackId: CS });
+    const listText = renderedText(list);
+    expect(listText).toContain('Nothing to preview yet');
+    expect(listText).not.toContain('view certificate');
+    await act(async () => {
+      list.unmount();
+    });
+
+    // The detail route refuses: no certificate fields (disclaimer) render.
+    const detail = await mount('CertificateDetail', {
+      trackId: CS,
+      levelId: BEGINNER,
+    });
+    const detailText = renderedText(detail);
+    expect(detailText).not.toContain(DISCLAIMER);
+    await act(async () => {
+      detail.unmount();
+    });
   });
 });

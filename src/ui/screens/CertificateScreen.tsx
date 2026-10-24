@@ -4,7 +4,9 @@
 // complete yet.
 
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { LevelId } from '../../domain/content/catalog.types';
 
 import { buildCertificatePreview } from '../../domain/certificates';
 import { useProgression } from '../context/ProgressionProvider';
@@ -87,9 +89,22 @@ export function CertificateScreen({ route, navigation }: Props) {
 
         <Text style={styles.cardLabel}>Completed levels</Text>
         {preview.completedLevels.map((levelId) => (
-          <Text key={levelId} style={styles.levelItem}>
-            • {levelLabel(levelId)}
-          </Text>
+          <Pressable
+            key={levelId}
+            style={styles.levelButton}
+            onPress={() =>
+              navigation.navigate('CertificateDetail', {
+                trackId,
+                levelId: levelId as LevelId,
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`View certificate for ${levelLabel(levelId)}`}
+          >
+            <Text style={styles.levelButtonText}>
+              • {levelLabel(levelId)} — view certificate
+            </Text>
+          </Pressable>
         ))}
 
         <Text style={styles.cardLabel}>Track complete</Text>
@@ -135,6 +150,15 @@ const styles = StyleSheet.create({
   },
   levelItem: {
     fontSize: 15,
+  },
+  levelButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  levelButtonText: {
+    fontSize: 15,
+    color: '#1f6feb',
+    fontWeight: '600',
   },
 });
 

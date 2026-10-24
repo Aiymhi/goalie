@@ -6,6 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { LevelId } from '../../domain/content/catalog.types';
+import { CertificateDetailScreen } from '../screens/CertificateDetailScreen';
 import { CertificateScreen } from '../screens/CertificateScreen';
 import { CoursePathScreen } from '../screens/CoursePathScreen';
 import { FocusScreen } from '../screens/FocusScreen';
@@ -43,6 +44,11 @@ export type RootStackParamList = {
   Progress: undefined;
   Focus: undefined;
   Certificate: { trackId: string };
+  // Phase 6 certificate detail for a single truly-complete level. Reached only
+  // from the Certificate list (which lists complete levels), and the domain
+  // also refuses an incomplete level, so this route can never render an
+  // unearned certificate.
+  CertificateDetail: { trackId: string; levelId: LevelId };
   Settings: undefined;
 };
 
@@ -110,6 +116,11 @@ export function RootNavigator({
           name="Certificate"
           component={CertificateScreen}
           options={{ title: 'Certificate preview' }}
+        />
+        <Stack.Screen
+          name="CertificateDetail"
+          component={CertificateDetailScreen}
+          options={{ title: 'Certificate' }}
         />
         <Stack.Screen
           name="Settings"

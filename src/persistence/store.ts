@@ -54,6 +54,13 @@ export interface PersistedData {
   // non-authoritative cache so the UI can show a sensible state before the
   // native read returns. Null when no session has been started.
   focusSession: FocusSessionRecord | null;
+  // Per-level completion timestamps (Phase 6). Key is `${trackId}/${levelId}`,
+  // value is the epoch-ms instant the level FIRST passed isLevelComplete.
+  // Written once on the real false->true edge and never overwritten — the
+  // certificate derives its completion date from this. A level completed before
+  // this field existed has no entry (certificate shows the date as unknown,
+  // never a fabricated now()). Defaults to {}.
+  completedLevels: Record<string, number>;
 }
 
 export function defaultPersistedData(): PersistedData {
@@ -70,6 +77,7 @@ export function defaultPersistedData(): PersistedData {
       disclosureAcknowledged: false,
     },
     focusSession: null,
+    completedLevels: {},
   };
 }
 
@@ -351,6 +359,35 @@ function guardV2(value: unknown): GuardResult {
     warnings.push('goalie: dropped malformed focus session');
   }
 
+  // --- completedLevels (non-authoritative: drop malformed entries) ---
+  // Absent or null defaults to {}. Each value must be a finite positive
+  // integer epoch-ms; any malformed entry is dropped with exactly one warn,
+  // and a non-object map resets to {} with the same single warn.
+  const rawCompleted = value.completedLevels;
+  let completedLevels: Record<string, number> = {};
+  if (rawCompleted === undefined || rawCompleted === null) {
+    completedLevels = {};
+  } else if (isPlainObject(rawCompleted)) {
+    let droppedCompleted = false;
+    for (const [key, ts] of Object.entries(rawCompleted)) {
+      if (
+        typeof ts === 'number' &&
+        Number.isInteger(ts) &&
+        ts > 0
+      ) {
+        completedLevels[key] = ts;
+      } else {
+        droppedCompleted = true;
+      }
+    }
+    if (droppedCompleted) {
+      warnings.push('goalie: dropped malformed completed level');
+    }
+  } else {
+    completedLevels = {};
+    warnings.push('goalie: dropped malformed completed level');
+  }
+
   return {
     data: {
       version: 2,
@@ -361,6 +398,7 @@ function guardV2(value: unknown): GuardResult {
       attemptHistory: { questions, practice },
       aiCoaching,
       focusSession,
+      completedLevels,
     },
     warnings,
   };
