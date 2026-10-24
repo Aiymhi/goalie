@@ -20,7 +20,6 @@ import { loadCatalog } from '../../domain/content/catalog';
 import { Catalog, LevelId } from '../../domain/content/catalog.types';
 import {
   completeLesson as completeLessonPure,
-  emptyProgression,
   ProgressionState,
   recordMasteryResult as recordMasteryResultPure,
 } from '../../domain/progression';
@@ -159,12 +158,7 @@ export function ProgressionProvider({ children }: { children: ReactNode }) {
   const deleteAllData = useCallback(async () => {
     // Clear persistence first; only reset memory if the wipe succeeded.
     await clearData();
-    setData({
-      version: 1,
-      selectedTrackId: null,
-      displayName: null,
-      progression: emptyProgression(),
-    });
+    setData(defaultPersistedData());
   }, []);
 
   const value = useMemo<ProgressionContextValue>(
