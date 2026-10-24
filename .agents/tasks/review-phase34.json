@@ -1,0 +1,12 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "severity": "NIT",
+      "detail": "The AbortController timeout timer in fetchAiHint is created even on the early-return path's opposite branch only, which is correct; however the abort reason is not surfaced to distinguish timeout from other network errors. This is purely cosmetic (both correctly fall back to local) and does not affect any guarantee. No action required for Phases 3+4.",
+      "location": "src/ai/coachingClient.ts:62-83"
+    }
+  ],
+  "summary": "Phases 3+4 (fair rewards + supportive coaching) fully satisfy every binding guarantee in the approved design. XP is idempotent via an id-keyed persisted ledger (20 first-lesson-ever, 50 first-mastery-pass-per-level-ever, repeats 0, no loss on retry, state returned by reference on a no-op). Streak advances at most once per local calendar day only on a first-time-XP completion, with the backwards-clock branch ordered before the gap arm, gap resets to 1, and XP/badges persist across missed days. Badges are minted only via applyBadge off deriveCompletionEvents (both lessons complete AND mastery passed), strictly separate from XP. The Clock is injected (prop seam, default systemClock in UI); the domain never calls Date and imports no react/react-native/AsyncStorage. PersistedData v1->v2 migration preserves progression with no retroactive XP and re-derives totalXp from the ledger. Rewards apply through ProgressionProvider in a single persisted transaction that survives reopen (idempotency proven by the reopen-simulation test). Coaching is deterministic and honest with the pre-write prior snapshot driving the 'improved' rule. The optional AI boundary is off by default, server-side-only with no key in the mobile bundle, shape-validates output down to a single hint, treats student text as untrusted/bounded, degrades to local on every failure, and never awards XP/mastery/certificates. All four verification commands were independently re-run and pass: typecheck (0 errors), lint (0 errors, 3 pre-existing benign require() warnings), test (13 suites / 161 tests), validate-catalog (3 tracks, 9 levels, 18 lessons, 45 questions). The single NIT is cosmetic and requires no change.",
+  "reviewDoc": "/Users/Shared/goalie/.agents/tasks/review-phase34.md"
+}

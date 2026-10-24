@@ -1,0 +1,46 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "reviewDoc": "/Users/Shared/goalie/.agents/tasks/design-phase34-review.md",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "MEDIUM",
+      "title": "Provider wrapper return-type change required by screens is never specified in the context interface",
+      "location": "§6.1 / §6.2 / §10 (Modify ProgressionProvider.tsx) vs ProgressionContextValue in src/ui/context/ProgressionProvider.tsx",
+      "problem": "The real ProgressionContextValue declares completeLesson and recordMasteryResult as returning Promise<void>. §6.2 binds both screens to render XP/badge lines and coaching from values the wrappers must RETURN ({ outcome, badgeEarned, priorPracticeAttempt } and { outcome, badgeEarned, priorByQuestionId }), and §6.1 adds an optional practiceAnswer?: string parameter to completeLesson. The design never states the new return types or that the context interface members change from Promise<void>. §10 only says 'expose viewRewards/RewardOutcome', which does not pin the wrapper return contracts the screens depend on. Under TS strict an implementer can produce a compile error or screens that cannot read badgeEarned/priorPracticeAttempt.",
+      "fix": "Add explicit new signatures to §6.1: define CompleteLessonOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorPracticeAttempt: PriorPracticeAttempt | null } and MasteryOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorByQuestionId: Record<string, PriorQuestionAttempt | null> }; change completeLesson to (trackId, levelId, lessonId, practiceAnswer?) => Promise<CompleteLessonOutcome> and recordMasteryResult to (...) => Promise<MasteryOutcome>; record in §10 that ProgressionContextValue changes these two members' return types, not just adds fields."
+    },
+    {
+      "id": 2,
+      "severity": "MEDIUM",
+      "title": "Screen smoke-test harness cannot drive the mandated provider/screen tests as written",
+      "location": "§8 provider/screens tests 26, 29a, 29b, 29c vs __tests__/screens.smoke.test.tsx",
+      "problem": "The existing mount() helper hard-codes <ProgressionProvider> with no clock prop and registers only Focus/CoursePath/Progress in ROUTE_COMPONENTS (not Result/MasteryResult). The mandated tests require injecting a FakeClock (29b), rendering Result/MasteryResult so completion flows run (26, 27, 29a), re-mounting from the saved AsyncStorage doc (26, 29a), and asserting on coachMasteryQuestion comparison.improved which is an internal value not necessarily present in the rendered strings the harness collects via renderedText. The design says 'extend the harness' but specifies none of these changes, so the tests are not implementable from the harness as-is.",
+      "fix": "Add a §8 note specifying harness extensions: mount(routeName, params, { clock }) forwarding clock to ProgressionProvider; register Result and MasteryResult in ROUTE_COMPONENTS; a re-mount-from-saved-doc helper; and that 29a observes the built CoachingFeedback (e.g. assert on the rendered 'improved'/'last time' comparison copy that is present only when comparison.improved) since renderedText sees only strings. Alternatively move the comparison.improved assertion into the pure coaching.test.ts (§8.14) and keep the smoke test to the rendered comparison copy across the two mounts."
+    },
+    {
+      "id": 3,
+      "severity": "NIT",
+      "title": "Existing v1-shaped store.test.ts cases break after the v2 migration; §8 does not call out updating them",
+      "location": "§5.3 / §8 items 18-25 vs existing __tests__/store.test.ts",
+      "problem": "The current store round-trip test saves a version:1 document and asserts loaded equals it with no warn; two deletion tests also save version:1 docs. After the v1->v2 migration, loading a v1 doc returns a v2 doc (not equal to the v1 input) and writes it back, breaking the equality assertion. §8 lists new v2 tests but never states the pre-existing v1-shaped tests must be migrated to the v2 shape. 'Tests stay green' is a stated project requirement.",
+      "fix": "Add a sentence to §8 or §5.3: the existing v1 round-trip and deletion tests in store.test.ts are rewritten to the v2 shape via defaultPersistedData(); the former v1 round-trip becomes the §8.18 migrate-and-write-back case."
+    },
+    {
+      "id": 4,
+      "severity": "NIT",
+      "title": "Screens currently recompute completion events; §6.2 removes this but §10 omits the dead-import/level-complete-copy cleanup",
+      "location": "§6.1/§6.2 vs ResultScreen.tsx / MasteryResultScreen.tsx (both import and call deriveCompletionEvents)",
+      "problem": "Both screens today import deriveCompletionEvents from the rewards domain and use it plus isLevelComplete to drive the existing 'You completed the <level> level.' copy. §6.2 says screens stop recomputing completion events and render the badge line from badgeEarned, but does not say what happens to the existing level-complete copy that depends on the local recompute, and §10's per-screen entries do not mention removing the now-dead import (which would trip eslint).",
+      "fix": "In §6.2 state the existing 'You completed the <level> level.' line is now driven by badgeEarned !== null (same false->true completeness edge), and the local deriveCompletionEvents/isLevelComplete recompute plus its import are removed from both screens; note it in the §10 entries for ResultScreen.tsx and MasteryResultScreen.tsx."
+    },
+    {
+      "id": 5,
+      "severity": "NIT",
+      "title": "Name-collision hygiene for the mastery wrapper return type vs the domain MasteryResult",
+      "location": "§6.1 wrappers / §6.4 MasteryResult note",
+      "problem": "§6.4 disambiguates the domain type MasteryResult from the route param MasteryResult, but the new mastery wrapper return value (Finding 1) lives in a module that already imports the domain MasteryResult and references the route list, risking a third same-named symbol.",
+      "fix": "Add one sentence to §6.1: the mastery wrapper's return type is named MasteryOutcome (distinct from the domain MasteryResult and the route param) to avoid a same-name collision in the provider module."
+    }
+  ]
+}

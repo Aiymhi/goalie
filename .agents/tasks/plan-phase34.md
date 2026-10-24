@@ -1,0 +1,118 @@
+# Implementation Plan — Goalie Phases 3 + 4 (Fair Rewards + Supportive Coaching)
+
+Source of truth: `/Users/Shared/goalie/.agents/tasks/design-phase34.md` (APPROVED — do not redesign). This plan sequences that design into ordered, independently verifiable steps. Phase 4 (rewards) is built first because it is the backbone; Phase 3 (coaching) layers on top; persistence v2 ties them into the store; the provider/screens wire them into the real flow; the optional AI boundary is last.
+
+Repo: `/Users/Shared/goalie`, branch `main`, local-only (no remote, no push, plain local commits, never `--amend`/force). Baseline confirmed green before planning: `npm run typecheck` exit 0, `node scripts/validate-catalog.mjs` exit 0.
+
+Verification commands (record exact output to `/Users/Shared/goalie/.agents/tasks/verification-phase34.md`):
+- `npm run typecheck`  (`tsc --noEmit`)
+- `npm run lint`       (`eslint .`)
+- `npm test`           (`jest`)
+- `node scripts/validate-catalog.mjs`
+
+Binding constraints carried from the design:
+- The domain layer (`src/domain/**`) imports NO react / react-native / AsyncStorage. The clock is injected via a `Clock` port; the domain never calls `Date`.
+- XP is idempotent via an id-keyed persisted ledger (lesson id verbatim; mastery key `mastery:${trackId}/${levelId}`). Repeats award 0; XP is monotonic-up-only.
+- Streak advances at most once per LOCAL calendar day, only on a first-time-XP completion; gap (>=2 days) resets to 1; same-day no change; backwards-clock (`delta < 0`, evaluated before the gap arm) no change, XP still awarded.
+- Badge `${trackId}/${levelId}` appends once on the `false->true` edge of `isLevelComplete` (both lessons + mastery), via `applyBadge` driven by the existing `deriveCompletionEvents`. XP never mints a badge.
+- `STORAGE_KEY` stays `'goalie.v1'`; the document `version` (1 -> 2) drives migration. v1->v2 preserves `selectedTrackId`/`displayName`/`progression`, inits rewards/history/aiCoaching empty, awards NO retroactive XP, re-derives `totalXp`, writes back once.
+- Coaching is deterministic/local; AI never changes a score, XP, badge, or certificate; the "improved" comparison requires a comparable PRE-WRITE prior AND current answer and must show the specific difference.
+
+---
+
+- [ ] 1. Extend the pure rewards domain with the XP/streak/badge model.
+      Add to `src/domain/rewards/index.ts` (keep existing `LevelCompletedEvent`/`deriveCompletionEvents`): `REWARDS_STATE_VERSION = 2`; types `LocalDateYYYYMMDD`, `StreakState`, `RewardsState`, `RewardSource`, `RewardOutcome`, `RewardsView`; `Clock` interface (`nowEpochMs()`, `localDateYYYYMMDD()`); `RewardError` (named class, mirrors `ProgressionError`); `emptyRewards()`; pure `daysBetweenLocalDates(from, to)` returning a SIGNED civil-day delta (`to - from`), throwing `RewardError('malformed local date')` only on non-8-digit input; `applyReward(prev, source, clock)` implementing §3.4 exactly (repeat -> return `prev` by reference with `alreadyAwarded:true`; first-time -> 20 (lesson) / 50 (mastery), update `totalXp`; streak branches in order a=null-prior, b=`delta<0`, c=`delta===0`, d=`delta===1`, e=`delta>=2`); `applyBadge(prev, events)` (append de-duped badge on a level-completed event); `viewRewards(state)` with `hasBadge(trackId, levelId)`. Empty/invalid ids in `source` throw `RewardError`; unknown `source.kind` has a defensive `default` throw. Maintain invariants `totalXp === sum(values(awardedXp))` and `lastLocalDateYYYYMMDD !== null => count >= 1`.
+      Files: `src/domain/rewards/index.ts`
+      Verify: `npm run typecheck` passes (no react/rn import added). Full coverage is asserted by step 2.
+
+- [ ] 2. Add deterministic rewards unit tests.
+      Extend `__tests__/rewards.test.ts` with design §8 items 1-11 using a `FakeClock` (settable `localDateYYYYMMDD`): first lesson = 20 XP + ledger key + `totalXp===20`; repeat = 0 + `alreadyAwarded` + state returned by reference; first mastery pass = 50 under key `mastery:track/level`, fail = 0 and no key; repeat mastery = 0; `totalXp === sum(awardedXp)` invariant after each; streak first/same-day/consecutive(+1)/gap(reset to 1) with correct `streakIncreased`/`streakReset`/`newStreakCount`; streak unmoved on a repeat; backwards clock -> no streak change but XP still awarded; `applyBadge` appends once / replay no-op / two levels two badges / empty events no badge; `RewardError` on malformed date and empty-id source; `viewRewards` totals/streak/badge-count/`hasBadge` accuracy; streak invariant after first and consecutive credits.
+      Files: `__tests__/rewards.test.ts`
+      Verify: `npm test -- rewards` passes; `npm run lint` clean on the changed file.
+
+- [ ] 3. Create the pure coaching domain.
+      New `src/domain/coaching/index.ts` (pure TS): export `MAX_PRACTICE_TEXT = 2000`; `CoachingError` (named class); interfaces `CoachingFeedback { strength; improvement; hint; comparison: ImprovementComparison | null; source: 'local' | 'ai' }`, `ImprovementComparison`, `PriorQuestionAttempt { selectedIndex; correct; atEpochMs }`, `PriorPracticeAttempt { hadText; atEpochMs }`; `coachMasteryQuestion(question, graded, priorAttempt)` and `coachPractice(lesson, currentAnswerText, priorAttempt)` per §4.2. Resolve option text from `question.options[graded.selectedIndex|correctIndex]` with the out-of-range/non-integer guard rendering "no valid option"; mastery hint restates the correct option + prompt (mastery questions carry no explanation field); practice hint = `lesson.practice.answerExplanation`, improvement = `lesson.nextStep`; empty/whitespace practice text uses the empty-text strength path. Comparison per §4.3: mastery `improved = (prior.correct===false && graded.correct===true)` with concrete summaries/difference, correct->incorrect states the regression, correct->correct "both times", no prior -> `null`; practice never asserts `improved` from text (factual "revisited" note only). Truncate `currentAnswerText` to `MAX_PRACTICE_TEXT`; treat it as data only (never store, never build executable/prompt context). Throw `CoachingError` when `graded.questionId !== question.id`. Builders always return `source:'local'`.
+      Files: `src/domain/coaching/index.ts`
+      Verify: `npm run typecheck` passes (no react/rn import). Behavior asserted by step 4.
+
+- [ ] 4. Add deterministic coaching unit tests.
+      New `__tests__/coaching.test.ts` covering §8 items 12-17: mastery correct (strength references chosen option, improvement a genuine next step, hint restates correct option, `source:'local'`); mastery incorrect (honest strength, improvement points at correct option); comparison null on first attempt, incorrect->correct `improved===true` with both summaries + specific difference, correct->incorrect `improved===false` stating the regression, correct->correct `improved===false` "both times"; practice non-empty (strength about responding, improvement=`nextStep`, hint=`answerExplanation`) and empty (acknowledges reaching the step, nudges an attempt), never asserts `improved` from text; over-long text truncated to `MAX_PRACTICE_TEXT`, an "ignore previous instructions" string treated as plain data (no behavior change, not stored); mismatched `graded.questionId` vs `question.id` -> `CoachingError`.
+      Files: `__tests__/coaching.test.ts`
+      Verify: `npm test -- coaching` passes; `npm run lint` clean.
+
+- [ ] 5. Bump persistence to PersistedData v2 with a v1->v2 migration.
+      Modify `src/persistence/store.ts` per §5: keep `STORAGE_KEY = 'goalie.v1'` (document comment explaining the slot name is intentionally unchanged); add `PERSISTED_VERSION = 2`; retain `PersistedDataV1` for migration-input typing; change `PersistedData` to v2 adding `rewards: RewardsState`, `attemptHistory: { questions: Record<string, PriorQuestionAttempt>; practice: Record<string, PriorPracticeAttempt> }`, and `aiCoaching: PersistedAiCoaching { enabled; endpointUrl; disclosureAcknowledged }`; update `defaultPersistedData()` to the full v2 shape (`rewards: emptyRewards()`, empty history, aiCoaching off/null/false). Make `loadData` version-aware: absent -> defaults; `version===2` + v2 guard -> as-is; `version===1` + v1 guard -> migrate (carry v1 fields verbatim, init new fields to defaults, NO retroactive XP, `saveData` the migrated doc once, return it); unparseable / shape-invalid / unknown-future `version` -> defaults + single `console.warn('goalie: discarding unreadable store')`. Extend the structural guard: `rewards.version===2`, `awardedXp` values in `{20,50}`, `totalXp` re-derived from the ledger if it disagrees (one `console.warn('goalie: recomputed xp total')`), `streak.count` non-negative integer, `lastLocalDateYYYYMMDD` null or 8-digit string, `earnedBadges` non-empty strings de-duped; drop only malformed `attemptHistory` records (one `console.warn('goalie: dropped malformed attempt history')`) keeping authoritative data; malformed `aiCoaching` resets to default (one `console.warn('goalie: reset ai-coaching setting')`); coerce `enabled -> false` silently unless `disclosureAcknowledged === true`. `saveData`/`clearData` contracts unchanged. Imports `emptyRewards`/`RewardsState` from the domain, keeping the store the only AsyncStorage importer.
+      Files: `src/persistence/store.ts`
+      Verify: `npm run typecheck` passes. Behavior asserted by step 6.
+
+- [ ] 6. Migrate and extend the store tests to v2.
+      Rewrite the pre-existing v1-shaped round-trip and two deletion cases in `__tests__/store.test.ts` to the v2 shape via `defaultPersistedData()`, and add §8 items 18-25d: migrate v1->v2 preserves progression + inits empty rewards/history + writes back (second load `version===2`); no retroactive XP (`totalXp===0`, empty `awardedXp`) even when v1 had completed levels; v2 round-trip equality with no warn; `totalXp` disagreement re-derives + one `recomputed xp total` warn; corrupt rewards (xp value 37) -> defaults + discard warn; malformed attempt record dropped but authoritative data kept + dropped-history warn; unknown `version:3` -> defaults + discard warn; `clearData` wipes v2 -> load equals defaults; `aiCoaching` round-trip; enable-without-ack coercion to `false` (silent, no warn); malformed `aiCoaching` reset + one `reset ai-coaching setting` warn with authoritative data preserved; v1->v2 inits `aiCoaching` to default off/un-acknowledged.
+      Files: `__tests__/store.test.ts`
+      Verify: `npm test -- store` passes (all pre-existing cases stay green after rewrite); `npm run lint` clean.
+
+- [ ] 7. Add the production Clock implementation.
+      New `src/ui/rewards/systemClock.ts` exporting `systemClock: Clock` as a value: `nowEpochMs: () => Date.now()` and `localDateYYYYMMDD()` formatting the DEVICE-LOCAL `new Date()` via `getFullYear`/`getMonth`+1/`getDate`, zero-padded to exactly 8 digits. Lives in the UI layer (touches the environment); the domain only sees the `Clock` interface.
+      Files: `src/ui/rewards/systemClock.ts`
+      Verify: `npm run typecheck` passes. A unit assertion that it emits 8 digits is covered by the smoke/clock tests in step 11 (or a tiny dedicated test if the implementer prefers).
+
+- [ ] 8. Wire rewards + coaching history into ProgressionProvider.
+      Modify `src/ui/context/ProgressionProvider.tsx` per §6.1: hold `rewards`/`attemptHistory`/`aiCoaching` from the loaded v2 `PersistedData`; add the optional prop seam `ProgressionProvider({ children, clock = systemClock })`; export new interfaces `CompleteLessonOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorPracticeAttempt: PriorPracticeAttempt | null }` and `MasteryOutcome { outcome: RewardOutcome; badgeEarned: string | null; priorByQuestionId: Record<string, PriorQuestionAttempt | null> }`; CHANGE the return types of `completeLesson` (now `(trackId, levelId, lessonId, practiceAnswer?) => Promise<CompleteLessonOutcome>`) and `recordMasteryResult` (now `=> Promise<MasteryOutcome>`) in `ProgressionContextValue`. Implement both wrappers as single persisted transactions per the §6.1 pseudocode: capture the PRE-WRITE prior attempt(s) first; run the pure progression transition; `applyReward` (lesson always; mastery only on `result.passed`, synthesize a zero-XP outcome on fail); resolve `Level` via a `resolveLevel` helper using `findTrack`/`findLevel` from `catalogLookup` (XP/streak-only with `events=[]` when `catalog` is null or an id is stale, never throw); `applyBadge` from the events; record THIS attempt as the new prior (practice `hadText = practiceAnswer != null && practiceAnswer.trim().length > 0`; mastery per graded question) in the same `persist`; return outcome + `badgeEarned` + the pre-write prior. Add a `setAiCoaching(next: PersistedAiCoaching) => Promise<void>` wrapper (same single-key `saveData` path). Expose `viewRewards(rewards)` (or the rewards state) + `aiCoaching` on the context. `deleteAllData` resets in-memory state from `defaultPersistedData()` (full v2 shape), not a v1 literal.
+      Files: `src/ui/context/ProgressionProvider.tsx`
+      Verify: `npm run typecheck` passes.
+
+- [ ] 9. Add the optional `practiceAnswer` route param and forward it from Practice.
+      Modify `src/ui/navigation/RootNavigator.tsx` so `Result` gains optional `practiceAnswer?: string` (all other routes unchanged). Modify `src/ui/screens/PracticeScreen.tsx` so the Continue CTA always forwards `draft`, trimmed and bounded to `MAX_PRACTICE_TEXT`, as `practiceAnswer` (display/coaching-only, never graded, raw text never persisted).
+      Files: `src/ui/navigation/RootNavigator.tsx`, `src/ui/screens/PracticeScreen.tsx`
+      Verify: `npm run typecheck` passes.
+
+- [ ] 10. Update Result, MasteryResult, and Progress screens for honest rewards + coaching.
+      Modify `src/ui/screens/ResultScreen.tsx`: call `completeLesson(trackId, levelId, lessonId, route.params.practiceAnswer)`; render the honest XP line ("You earned 20 XP" first time, "already earned" on repeat), the streak line only when `streakIncreased`, and drive the existing "You completed the `<level>` level." copy from `badgeEarned !== null`; render `coachPractice(lesson, route.params.practiceAnswer ?? '', priorPracticeAttempt)` (the returned PRE-WRITE prior, never live provider state) showing strength/improvement/hint and the comparison block only when `comparison !== null`; REMOVE the now-dead local `deriveCompletionEvents`/`isLevelComplete` recompute and the `import { deriveCompletionEvents } from '../../domain/rewards'` and `import { ... isLevelComplete } from '../../domain/progression'` lines that become unused (eslint would flag them). Modify `src/ui/screens/MasteryResultScreen.tsx`: render the +50 XP line for the first mastery pass only (else "already earned"/nothing on fail), a badge-earned line and the level-complete copy from `badgeEarned !== null`, and per-question `coachMasteryQuestion(question, graded, priorByQuestionId[graded.questionId])` from the returned pre-write priors; keep the "retrying never lowers your best" note; REMOVE the dead recompute + unused `deriveCompletionEvents`/`isLevelComplete` imports. Modify `src/ui/screens/ProgressScreen.tsx`: add a `viewRewards` section showing total XP + streak + earned-badge count under an explicit "Your effort" label, separated from a "Levels mastered" section; per-level badges render only when `hasBadge(trackId, levelId)`; no fabricated numbers. Focus screen and certificate preview stay unchanged (structural guarantee that streak never moves on app open / focus and XP never gates certificates).
+      Files: `src/ui/screens/ResultScreen.tsx`, `src/ui/screens/MasteryResultScreen.tsx`, `src/ui/screens/ProgressScreen.tsx`
+      Verify: `npm run typecheck` passes; `npm run lint` clean (confirms no unused imports remain).
+
+- [ ] 11. Extend the smoke-test harness and add provider/screen reward+coaching tests.
+      Extend `__tests__/screens.smoke.test.tsx` harness: `mount(routeName, params, { clock })` forwarding a `FakeClock` into `<ProgressionProvider clock={clock}>` (omitted -> default `systemClock`, so existing call sites stay valid); register `Result` and `MasteryResult` in `ROUTE_COMPONENTS`; add a `remount(routeName, params, { clock })` reopen helper that builds a fresh provider tree loading the already-persisted `goalie.v1` document; migrate existing Progress tests' stored docs to valid v2 (or rely on the v1->v2 migration, which the guard accepts). Add §8 items 26-29c: completing a lesson once awards 20 XP and persists it, re-running via `remount`+revisit awards no additional XP (ledger idempotency across reopen); a mastery pass awards 50 and earns the level badge exactly once when both lessons are complete, and a failing retry keeps the badge and does not change XP; ProgressScreen renders XP/streak under the effort label and a badge only when `hasBadge`, with a high-XP/no-mastery state showing "0 levels mastered"; the Focus screen leaves `rewards` untouched; the prior-attempt snapshot test (incorrect then, via `remount`, correct on the same question) renders the "improved"/"last time" comparison copy while a first-ever attempt renders none; the clock-seam test (`FakeClock('20250131')` -> complete lesson -> advance to `'20250201'` -> complete another) credits a consecutive-day streak (count 2); the catalog-null test applies XP/streak and returns `badgeEarned:null` without throwing. (The raw `comparison.improved===true` boolean stays asserted in the pure `coaching.test.ts` §8.14; the smoke test asserts only rendered copy.)
+      Files: `__tests__/screens.smoke.test.tsx`
+      Verify: `npm test -- screens.smoke` passes; then `npm test` (full suite) passes; `npm run lint` clean.
+
+- [ ] 12. Add the optional AI client adapter (off by default, no key in the bundle).
+      New `src/ai/coachingClient.ts` per §9.2: `AiCoachingConfig { enabled; endpointUrl; timeoutMs }` (default enabled:false, endpointUrl:null, timeoutMs:4000) and `fetchAiHint(input, config): Promise<string | null>` using RN-global `fetch` + `AbortController`. If `!enabled || !endpointUrl` -> return `null` immediately (no network). Else POST JSON (`studentText` truncated to `MAX_PRACTICE_TEXT`) with an abort timeout; on any non-200 / abort / network throw / shape-check failure (expect exactly `{ hint: string }` non-empty length-bounded, strip any other field) -> return `null`. No new dependency, no SDK, no API key on the device.
+      Files: `src/ai/coachingClient.ts`
+      Verify: `npm run typecheck` passes. Behavior asserted by step 13.
+
+- [ ] 13. Wire AI into the practice hint path and add the AI adapter tests.
+      In the practice coaching integration (ResultScreen, driven through the provider's `aiCoaching` setting + build-time `timeoutMs:4000`), when enabled and a shape-valid hint returns, replace ONLY `CoachingFeedback.hint` and set `source:'ai'`; otherwise keep the local hint and `source:'local'`. Add new `__tests__/aiCoaching.test.ts` per §8 items 30-33 (mock `fetch`): feature off (default) -> adapter never called, `source:'local'`; timeout / non-200 / missing-config -> local fallback, no throw; well-formed response replaces only the hint and sets `source:'ai'`; a malformed/shape-invalid response (or one carrying a score/XP/badge/certificate field) is rejected/stripped and falls back. Mastery grading, XP, badges, and certificates stay deterministic and untouched by AI.
+      Files: `src/ai/coachingClient.ts` (if integration glue is needed), the practice coaching call site in `src/ui/screens/ResultScreen.tsx`, `__tests__/aiCoaching.test.ts`
+      Verify: `npm test -- aiCoaching` passes; `npm test` full suite passes.
+
+- [ ] 14. Add the Settings AI disclosure + toggle, wired to `setAiCoaching`.
+      Modify `src/ui/screens/SettingsScreen.tsx` per §9.4: add an AI-coaching section with the enable toggle (default off, disabled until the disclosure is acknowledged), an endpoint-URL entry, and the disclosure acknowledgement, each persisted through the provider's `setAiCoaching(next: PersistedAiCoaching)` wrapper. The in-app disclosure summarizes exactly what leaves the device (lesson id, prompt, suggested answer, truncated practice text) and that nothing is sent while off.
+      Files: `src/ui/screens/SettingsScreen.tsx`
+      Verify: `npm run typecheck` passes; `npm run lint` clean.
+
+- [ ] 15. Add the documented server contract + local stub and the data-leaves-the-device docs.
+      New `server/` with its own `server/package.json` (pinned `express` 4.21.2, `@types/express` 4.17.21 — NOT in the root `package.json`/lockfile) and a `POST /coach/explain` stub handler: request `{ lessonId, prompt, suggestedAnswer, studentText }`, response `200 { hint: string }` (deterministic canned hint) or a non-200 (e.g. 503) to exercise the client fallback; the provider API key is read from `process.env` server-side only (a clearly-marked TODO for a real provider call); student text is treated as untrusted (type/length validation, placed only in a quoted data section if ever used in a prompt). Add `server/README.md` noting key-server-only + the TODO. New `docs/ai-coaching.md` documenting exactly what data leaves the device (and what does not: no name, progression, XP, or device identifiers), that nothing is sent while the feature is off, and the pre-enable disclosure requirement.
+      Files: `server/package.json`, `server/` stub handler + `server/README.md`, `docs/ai-coaching.md`
+      Verify: the root app is unaffected — `npm run typecheck`, `npm run lint`, `npm test`, `node scripts/validate-catalog.mjs` all stay green (the server is isolated and not imported by the mobile app). If `server/` is installed and has a test, run it separately; otherwise confirm it is documented as a local-only stub.
+
+- [ ] 16. Full verification pass and record results.
+      Run all four commands from a clean state and capture exact output to `/Users/Shared/goalie/.agents/tasks/verification-phase34.md`: `npm run typecheck`, `npm run lint`, `npm test`, `node scripts/validate-catalog.mjs`. All must pass (validator unchanged: 3 tracks / 9 levels / 18 lessons / 45 questions). Fix any failures before marking complete.
+      Files: `/Users/Shared/goalie/.agents/tasks/verification-phase34.md`
+      Verify: all four commands exit 0; the verification file contains their real output.
+
+---
+
+## New tests to add
+- `__tests__/coaching.test.ts` (new) — design §8 items 12-17.
+- `__tests__/aiCoaching.test.ts` (new) — design §8 items 30-33.
+- `__tests__/rewards.test.ts` (extend) — design §8 items 1-11.
+- `__tests__/store.test.ts` (extend + migrate v1-shaped cases to v2) — design §8 items 18-25d.
+- `__tests__/screens.smoke.test.tsx` (extend harness + add) — design §8 items 26-29c.
+
+## Existing tests to migrate
+- `__tests__/store.test.ts`: the v1-shaped round-trip and the two deletion cases are rewritten to the v2 shape via `defaultPersistedData()` (the former v1 round-trip becomes the migrate-and-write-back case; deletion cases save v2 docs). Pre-existing corrupt-store warn cases still use literal v1 docs to exercise the "unknown/invalid at declared version" path, kept green.
+- `__tests__/screens.smoke.test.tsx`: Progress tests' stored docs either move to valid v2 or rely on the accepted v1->v2 migration; the `mount` harness gains the optional `{ clock }` options object (existing call sites unaffected).
+
+## Open assumptions (reasonable, non-blocking)
+- `systemClock`'s 8-digit output is asserted either by a tiny dedicated test or within the clock-seam smoke test (step 7/11). Either satisfies the design's "formatter emits 8 digits" note.
+- The `server/` stub is delivered as a local, runnable-but-not-deployed handler per §2/§9.3; no deployment is attempted in this environment.

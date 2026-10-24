@@ -1,0 +1,7 @@
+{
+  "task_id": "task-goalie-phase34",
+  "task_description": "Implement Goalie Phases 3 (supportive coaching) + 4 (fair rewards) per the APPROVED design at .agents/tasks/design-phase34.md: a pure, deterministic, idempotent, persistent XP/streak/badge rewards domain and a pure deterministic coaching domain; a PersistedData v1->v2 migration preserving progression with no retroactive XP; wiring into ProgressionProvider + Result/MasteryResult/Progress/Settings screens so a completed learning activity updates XP/streak/badges exactly once and survives reopen; and an optional, off-by-default, server-side-only AI hint boundary with graceful local fallback, plus docs and an isolated server stub. Verification: npm run typecheck, npm run lint, npm test, node scripts/validate-catalog.mjs.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}
